@@ -1,0 +1,27 @@
+# No publishing credentials or registry uploads until licensing, name ownership,
+# statistical validation, and release gates have owner sign-off.
+name: Release artifact validation (no publish)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install build twine
+      - run: python -m build
+      - run: python -m twine check dist/*
+      - run: python -m pip install -e ".[validation]"
+      - run: python -m validation.release_readiness --output validation/reports/v1_release_readiness.json
+      - run: echo 'Artifacts only. Publication disabled pending release checklist sign-off.'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unapproved-release-candidate
+          path: |
+            dist/*
+            validation/reports/v1_release_readiness.*

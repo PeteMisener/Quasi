@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Observational ATT, Matching &amp; OVB Sensitivity — Quasi Tutorial</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <a class="brand-title" href="index.html">
+          Quasi
+          <span class="brand-sub">quasi-qed · v0.2.0.dev0</span>
+        </a>
+        <button id="theme-toggle" class="theme-btn" type="button">Dark</button>
+      </div>
+      <div>
+        <div class="nav-section-label">Tutorial Chapters</div>
+        <ul class="nav-list">
+          <li><a class="nav-link" href="index.html"><span class="nav-num">00</span><span>Overview &amp; Quickstart</span></a></li><li><a class="nav-link" href="did.html"><span class="nav-num">01</span><span>Difference-in-Differences</span></a></li><li><a class="nav-link" href="rdd.html"><span class="nav-num">02</span><span>Regression Discontinuity</span></a></li><li><a class="nav-link" href="iv.html"><span class="nav-num">03</span><span>Instrumental Variables</span></a></li><li><a class="nav-link" href="its.html"><span class="nav-num">04</span><span>Interrupted Time Series</span></a></li><li><a class="nav-link" href="synthetic.html"><span class="nav-num">05</span><span>Synthetic Control &amp; SDiD</span></a></li><li><a class="nav-link active" href="observational.html"><span class="nav-num">06</span><span>Observational ATT &amp; PSM</span></a></li><li><a class="nav-link" href="inference-power-reporting.html"><span class="nav-num">07</span><span>Inference, Power &amp; Reporting</span></a></li>
+        </ul>
+      </div>
+      <div class="toc-box">
+        <div class="nav-section-label">On This Page</div>
+        <ul><li><a href="#estimators">1. AIPW, IPW &amp; PSM</a></li><li><a href="#balance">2. Balance &amp; OVB Sensitivity</a></li></ul>
+      </div>
+    </aside>
+    <main class="main">
+      <section class="hero">
+        <span class="badge">Chapter 06 · Selection on Observables</span>
+        <h1>Observational ATT, Matching &amp; OVB Sensitivity</h1>
+        <p>Cross-fitted & stabilized AIPWATT, normalized IPWATT, k-NN PropensityScoreMatching with Abadie–Imbens SE, Love plots, and Cinelli–Hazlett OVB sensitivity.</p>
+      </section>
+      <div class="kpi-row"><div class="kpi"><div class="kpi-label">AIPW ATT (True = 2.40)</div><div class="kpi-val">+2.268</div><div class="kpi-sub">SE = 0.106 (5-fold stabilized)</div></div><div class="kpi"><div class="kpi-label">PSM + Abadie–Imbens</div><div class="kpi-val">+2.195</div><div class="kpi-sub">AI SE = 0.290 (k=3, caliper=0.15)</div></div><div class="kpi"><div class="kpi-label">OVB Robustness RV_q</div><div class="kpi-val">57.2%</div><div class="kpi-sub">RV_(q,0.05) = 53.9%</div></div><div class="kpi"><div class="kpi-label">Max Post-Weight |SMD|</div><div class="kpi-val">0.058</div><div class="kpi-sub">Down from 0.460</div></div></div><h2 id="estimators">1. AIPW, IPW &amp; Nearest-Neighbor Matching</h2><p>Quasi separates doubly robust <code>AIPWATT</code> (supporting both stacked M-estimation and K-fold cross-fitting with pluggable <code>scikit-learn</code> learners), Hájek-normalized <code>IPWATT</code>, and deterministic nearest-neighbor <code>PropensityScoreMatching</code>. Because ordinary bootstrapping is invalid for nearest-neighbor matching, primary PSM SE is intentionally <code>None</code> and exact <strong>Abadie &amp; Imbens (2006) Theorem 7</strong> conditional variance is available via <code>.abadie_imbens_se()</code>.</p><div class="code-card"><div class="code-header"><span>Observational ATT + Abadie-Imbens SE + OVB Sensitivity</span><button class="copy-btn" type="button">Copy</button></div><pre><code>import quasi
+
+covs = (&quot;age&quot;, &quot;prior_earn&quot;, &quot;education&quot;)
+
+# 1. Cross-fitted, Hajek-stabilized Doubly Robust ATT (AIPW)
+aipw = quasi.estimate(
+    df_obs,
+    design=quasi.ObservationalDesign(
+        outcome=&quot;earnings&quot;, treatment=&quot;training&quot;, covariates=covs,
+        estimator=&quot;aipw&quot;, n_splits=5, fold_seed=42, stabilized=True,
+    ),
+)
+
+# 2. Normalized odds-weighted IPW ATT
+ipw = quasi.estimate(
+    df_obs,
+    design=quasi.ObservationalDesign(
+        outcome=&quot;earnings&quot;, treatment=&quot;training&quot;, covariates=covs, estimator=&quot;ipw&quot;,
+    ),
+)
+
+# 3. Nearest-Neighbor PSM (point-only primary SE) + Abadie &amp; Imbens (2006) Theorem 7 SE
+psm = quasi.estimate(
+    df_obs,
+    design=quasi.ObservationalDesign(
+        outcome=&quot;earnings&quot;, treatment=&quot;training&quot;, covariates=covs,
+        estimator=&quot;psm&quot;, n_neighbors=3, caliper=0.15,
+    ),
+)
+ai = psm.abadie_imbens_se(l_matches=2)
+
+# 4. Cinelli &amp; Hazlett (2020) Omitted-Variable Bias Sensitivity (Robustness Values)
+ovb = aipw.ovb_sensitivity(q=1.0, alpha=0.05)</code></pre><pre class="output-pre"><code>AIPW (5-fold, stabilized): ATT = +2.2684, SE = 0.1063, 95% CI = [+2.0601, +2.4766]
+IPW (Hajek odds)         : ATT = +2.2282, SE = 0.1274, 95% CI = [+1.9786, +2.4779]
+PSM (k=3, caliper=0.15)  : ATT = +2.1955, Abadie-Imbens SE = 0.2899, 95% CI = [+1.6272, +2.7638]
+Cinelli-Hazlett OVB      : RV_q = 0.5723 (confounder must explain &gt;=57.2% of residual Y &amp; D variance to zero out ATT);
+                           RV_(q,alpha) = 0.5393 (to lose significance at alpha=0.05)</code></pre></div><div class="figure-card"><img src="assets/obs_love_plot.png" alt="Covariate balance Love plot generated by Quasi" loading="lazy" /><div class="figure-caption"><strong>Figure 5.</strong> Standardized Mean Differences (|SMD|) before and after propensity reweighting, generated via <code>aipw.plot()</code>.</div></div><h2 id="balance">2. Balance Diagnostics &amp; OVB Sensitivity</h2><table class="data-table"><thead><tr><th>Covariate</th><th>Unadjusted |SMD|</th><th>Weighted |SMD| (AIPW)</th><th>Matched |SMD| (PSM)</th></tr></thead><tbody><tr><td>age</td><td>0.4600</td><td>0.0581</td><td>0.0145</td></tr><tr><td>prior_earn</td><td>0.3950</td><td>0.0155</td><td>0.0358</td></tr><tr><td>education</td><td>0.2155</td><td>0.0364</td><td>0.0600</td></tr></tbody></table><div class="callout warn"><div class="callout-title">Balance &amp; Overlap Are Necessary, Not Sufficient</div><div>Achieving |SMD| &lt; 0.10 checks balance on <em>observed</em> covariates only. Combine balance diagnostics with <code>.ovb_sensitivity()</code> (Cinelli &amp; Hazlett 2020) to quantify how strong an unobserved confounder would have to be to overturn your conclusions.</div></div>
+      <nav class="pager"><a href="synthetic.html">&larr; Synthetic Control &amp; SDiD</a><a href="inference-power-reporting.html">Inference, Power &amp; Reporting &rarr;</a></nav>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

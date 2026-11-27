@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shared Inference, Power Analysis &amp; Reporting — Quasi Tutorial</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <a class="brand-title" href="index.html">
+          Quasi
+          <span class="brand-sub">quasi-qed · v0.2.0.dev0</span>
+        </a>
+        <button id="theme-toggle" class="theme-btn" type="button">Dark</button>
+      </div>
+      <div>
+        <div class="nav-section-label">Tutorial Chapters</div>
+        <ul class="nav-list">
+          <li><a class="nav-link" href="index.html"><span class="nav-num">00</span><span>Overview &amp; Quickstart</span></a></li><li><a class="nav-link" href="did.html"><span class="nav-num">01</span><span>Difference-in-Differences</span></a></li><li><a class="nav-link" href="rdd.html"><span class="nav-num">02</span><span>Regression Discontinuity</span></a></li><li><a class="nav-link" href="iv.html"><span class="nav-num">03</span><span>Instrumental Variables</span></a></li><li><a class="nav-link" href="its.html"><span class="nav-num">04</span><span>Interrupted Time Series</span></a></li><li><a class="nav-link" href="synthetic.html"><span class="nav-num">05</span><span>Synthetic Control &amp; SDiD</span></a></li><li><a class="nav-link" href="observational.html"><span class="nav-num">06</span><span>Observational ATT &amp; PSM</span></a></li><li><a class="nav-link active" href="inference-power-reporting.html"><span class="nav-num">07</span><span>Inference, Power &amp; Reporting</span></a></li>
+        </ul>
+      </div>
+      <div class="toc-box">
+        <div class="nav-section-label">On This Page</div>
+        <ul><li><a href="#inference">1. Shared Inference Engine</a></li><li><a href="#power">2. Power Analysis &amp; Simulation</a></li><li><a href="#reporting">3. Publication Reporting &amp; AI</a></li></ul>
+      </div>
+    </aside>
+    <main class="main">
+      <section class="hero">
+        <span class="badge">Chapter 07 · Production Workflows</span>
+        <h1>Shared Inference, Power Analysis &amp; Reporting</h1>
+        <p>Direct access to CR2/multi-way/WCB/EWC inference, Burlig–Preonas–Woerman & CCT power calculations, multi-format publication tables, JSON provenance, and offline AI.</p>
+      </section>
+      <h2 id="inference">1. Frontier Shared Inference Engine (<code>quasi.inference</code>)</h2><p>All inference primitives are exposed directly for custom workflows: thin-SVD <strong>CR2 + Satterthwaite df</strong> (no O(n<sub>g</sub><sup>2</sup>) matrices), <strong>Cameron–Gelbach–Miller multi-way clustering</strong> with PSD audit, <strong>Wild Cluster Bootstrap</strong> (Rademacher &amp; Webb 6-point), and <strong>EWC fixed-<em>b</em> HAR</strong>.</p><div class="code-card"><div class="code-header"><span>quasi.inference Primitives</span><button class="copy-btn" type="button">Copy</button></div><pre><code>from quasi.inference import (
+    least_squares, cr2_covariance, multiway_cluster_covariance,
+    wild_cluster_bootstrap, ewc_har_covariance,
+)
+
+fit = least_squares(X, y)
+cr2 = cr2_covariance(X, fit.residuals, cluster_g)                 # O(N p^2) thin-SVD CR2 + Satterthwaite df
+mw  = multiway_cluster_covariance(X, fit.residuals, [g1, g2])     # Cameron-Gelbach-Miller multi-way + PSD audit
+wcb = wild_cluster_bootstrap(X, y, cluster_g, param_index=1, null_value=0.0, reps=499, weights=&quot;webb&quot;, seed=42)
+ewc = ewc_har_covariance(X, fit.residuals)                        # Lazarus-Lewis-Stock-Watson fixed-b HAR</code></pre><pre class="output-pre"><code>OLS coef[1] = +1.0653
+CR2 SE      = 0.3047 (Satterthwaite df = 12.00 on G=14 clusters)
+Multi-way SE= 0.2870 (PSD adjusted = False)
+WCB (Webb)  = t_obs=+3.632, p=0.0040 (reps=499)
+EWC HAR SE  = 0.2445 (df=17)</code></pre></div><h2 id="power">2. Design-Based &amp; Simulation Power Analysis (<code>quasi.power</code>)</h2><p>Evaluate minimum detectable effects and required sample sizes before data collection—or run exact seeded Monte Carlo power with <code>simulate_power()</code> for any <code>DesignSpec</code>.</p><div class="code-card"><div class="code-header"><span>Ex-Ante &amp; Simulation Power</span><button class="copy-btn" type="button">Copy</button></div><pre><code>from quasi.power import did_mde, did_sample_size, rdd_mde, synth_feasibility, simulate_power
+
+# Burlig, Preonas &amp; Woerman (2020) AR(1) clustered panel DiD power
+p_did = did_mde(n_clusters=40, n_periods=8, pre_periods=4, cluster_size=30, sd_y=2.0, serial_correlation=0.45, icc=0.05)
+g_req = did_sample_size(target_mde=0.40, n_periods=8, pre_periods=4, cluster_size=30, sd_y=2.0, serial_correlation=0.45, icc=0.05)
+
+# Exact CCT boundary-variance RDD power (with RBC inflation)
+p_rdd = rdd_mde(n_total=2500, fraction_in_bandwidth=0.25, kernel=&quot;triangular&quot;, order=1, inference=&quot;bias_corrected&quot;)
+
+# Synthetic control donor-pool feasibility screen
+s_feas = synth_feasibility(n_donors=25, n_pre_periods=18, alpha=0.05)
+
+# Monte Carlo simulation power for any DesignSpec
+sim_pwr = simulate_power(
+    quasi.ITSDesign(outcome=&quot;y&quot;, time=&quot;t&quot;, intervention_date=30, error_model=&quot;ewc&quot;),
+    dgp_fn, n_sims=30, seed=42,
+)</code></pre><pre class="output-pre"><code>DiD MDE (G=40, AR1 rho=0.45, ICC=0.05): 0.4621 (0.231 SD); clusters for MDE=0.40 -&gt; G=53
+RDD MDE (N=2500, RBC triangular p=1)  : 0.6023
+Synth feasibility (N0=25, T0=18)      : min two-sided p=0.0769, viable at 5%=False
+Monte Carlo simulate_power (30 reps)  : power=0.833 (MCSE=0.068), mean_est=1.512</code></pre></div><div class="figure-card"><img src="assets/power_curves.png" alt="DiD ex-ante power curves generated by Quasi" loading="lazy" /><div class="figure-caption"><strong>Figure 6.</strong> Noncentral-<em>t</em> power curves by effect size and cluster count under Burlig–Preonas–Woerman (2020) AR(1) serial correlation (<code>p_did.plot()</code>).</div></div><h2 id="reporting">3. Publication Tables, HTML Cards, JSON &amp; AI Interpretation</h2><p><code>compare_models()</code> safely mixes standard and point-only results (like <code>SDiDResult</code>), extracts live diagnostics dynamically, and exports to LaTeX (AER / Nature), Typst, Markdown, HTML, and Rich terminal tables.</p><div class="code-card"><div class="code-header"><span>Multi-Format Reporting &amp; Offline AI</span><button class="copy-btn" type="button">Copy</button></div><pre><code>from quasi.reporting.table import compare_models
+
+table = compare_models(
+    {&quot;DiD (Imp. DR)&quot;: did_res, &quot;Sharp RDD&quot;: rdd_res, &quot;2SLS IV&quot;: iv_res, &quot;SDiD (Point)&quot;: sdid_res},
+    title=&quot;Cross-Design Policy Evaluation Summary&quot;,
+)
+latex = table.to_latex()                # AER booktabs LaTeX
+typst = table.to_typst()                # Modern Typst markup
+md    = table.to_markdown()             # GitHub-Flavored Markdown
+html  = table.to_html()                 # Styled HTML table
+rec   = quasi.ResultRecord.from_json(did_res.to_json())
+
+# Privacy-preserving AI explanation (metadata only, zero raw microdata transmitted)
+quasi.ai.configure(provider=&quot;mock&quot;, offline=True)
+print(did_res.explain(audience=&quot;academic&quot;))</code></pre></div><div class="tabs"><div class="tab-bar"><button type="button" class="tab-btn active">Rendered HTML Table</button><button type="button" class="tab-btn">Rendered HTML Card</button><button type="button" class="tab-btn">LaTeX (AER)</button><button type="button" class="tab-btn">Typst</button><button type="button" class="tab-btn">Markdown</button><button type="button" class="tab-btn">JSON ResultRecord</button><button type="button" class="tab-btn">Offline AI Explanation</button></div><div class="tab-panel active"><div style="overflow-x:auto;background:#fff;color:#0f172a;padding:12px;border-radius:8px;"><div style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 900px; margin: 16px 0;">
+<h3 style="color: #1B2631; margin-bottom: 8px;">Cross-Design Policy Evaluation Summary</h3>
+<table style="width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: center;">
+<thead>
+<tr style="border-top: 2px solid #2C3E50; border-bottom: 1.5px solid #2C3E50;">
+<th style="text-align: left; padding: 8px;"></th>
+<th style="padding: 8px; font-weight: 700;">(1)<br>DiD (Imp. DR)</th>
+<th style="padding: 8px; font-weight: 700;">(2)<br>Sharp RDD</th>
+<th style="padding: 8px; font-weight: 700;">(3)<br>2SLS IV</th>
+<th style="padding: 8px; font-weight: 700;">(4)<br>SDiD (Point)</th>
+</tr>
+</thead>
+<tbody>
+<tr style="background: #F8F9F9; font-weight: 700; text-align: left;"><td colspan="5" style="padding: 6px 8px;">Panel A: Causal Estimates</td></tr>
+<tr style="border-top: 1px solid #EAECEE;">
+<td style="text-align: left; padding: 6px 8px; font-weight: 600;">Treatment Effect</td>
+<td style="padding: 6px 8px; font-weight: 700; color: #1B4F72;">+4.325***</td>
+<td style="padding: 6px 8px; font-weight: 700; color: #1B4F72;">+0.474***</td>
+<td style="padding: 6px 8px; font-weight: 700; color: #1B4F72;">+1.835***</td>
+<td style="padding: 6px 8px; font-weight: 700; color: #1B4F72;">-3.694</td>
+</tr>
+<tr>
+<td style="text-align: left; padding: 2px 8px;"></td>
+<td style="padding: 2px 8px; color: #566573;">(0.239)</td>
+<td style="padding: 2px 8px; color: #566573;">(0.081)</td>
+<td style="padding: 2px 8px; color: #566573;">(0.053)</td>
+<td style="padding: 2px 8px; color: #566573;">(N/A)</td>
+</tr>
+<tr style="background: #F8F9F9; font-weight: 700; text-align: left; border-top: 1.5px solid #BDC3C7;"><td colspan="5" style="padding: 6px 8px;">Panel B: Model Specification</td></tr>
+<tr style="border-top: 1px solid #EAECEE;">
+<td style="text-align: left; padding: 6px 8px;">Model Class</td>
+<td style="padding: 6px 8px;">CallawaySantAnnaDiD</td>
+<td style="padding: 6px 8px;">SharpRDD</td>
+<td style="padding: 6px 8px;">TwoStageLS</td>
+<td style="padding: 6px 8px;">SyntheticDiD</td>
+</tr>
+<tr style="border-top: 1px solid #EAECEE;">
+<td style="text-align: left; padding: 6px 8px;">Estimand</td>
+<td style="padding: 6px 8px;">Post-treatment cohort-size-weighted ATT across identified (g,t) cells</td>
+<td style="padding: 6px 8px;">Sharp RD local outcome discontinuity</td>
+<td style="padding: 6px 8px;">IV structural coefficient (causal interpretation requires valid instrument assumptions)</td>
+<td style="padding: 6px 8px;">Single-unit post-period average SDiD effect</td>
+</tr>
+<tr style="border-top: 1px solid #EAECEE;">
+<td style="text-align: left; padding: 6px 8px;">Outcome Variable</td>
+<td style="padding: 6px 8px;">score</td>
+<td style="padding: 6px 8px;">gpa</td>
+<td style="padding: 6px 8px;">wage</td>
+<td style="padding: 6px 8px;">consumption</td>
+</tr>
+<tr style="border-top: 1px solid #EAECEE;">
+<td style="text-align: left; padding: 6px 8px;">Inference</td>
+<td style="padding: 6px 8px;">improved_dr_ipt_wls_analytical_normal_experimental</td>
+<td style="padding: 6px 8px;">experimental_bias_corrected_nn</td>
+<td style="padding: 6px 8px;">IV_2SLS_HC1</td>
+<td style="padding: 6px 8px;">not_available</td>
+</tr>
+<tr style="background: #F8F9F9; font-weight: 700; text-align: left; border-top: 1.5px solid #BDC3C7;"><td colspan="5" style="padding: 6px 8px;">Panel C: Identification Diagnostics</td></tr>
+<tr style="border-top: 1px solid #EAECEE;">
+<td style="text-align: left; padding: 6px 8px;">Diagnostic Status</td>
+<td style="padding: 6px 8px;">passed_checks_only</td>
+<td style="padding: 6px 8px;">warnings</td>
+<td style="padding: 6px 8px;">warnings</td>
+<td style="padding: 6px 8px;">warnings</td>
+</tr>
+<tr style="border-top: 1px solid #EAECEE;">
+<td style="text-align: left; padding: 6px 8px;">Unconditional pre-period placebo differences</td>
+<td style="padding: 6px 8px;">p=0.510 [PASS]</td>
+<td style="padding: 6px 8px;">-</td>
+<td style="padding: 6px 8px;">-</td>
+<td style="padding: 6px 8px;">-</td>
+</tr>
+<tr style="border-top: 1px solid #EAECEE;">
+<td style="text-align: left; padding: 6px 8px;">Exploratory Density-Jump Screen (not McCrary)</td>
+<td style="padding: 6px 8px;">-</td>
+<td style="padding: 6px 8px;">p=0.024 [WARN]</td>
+<td style="padding: 6px 8px;">-</td>
+<td style="padding: 6px 8px;">-</td>
+</tr>
+<tr style="border-top: 1px solid #EAECEE;">
+<td style="text-align: left; padding: 6px 8px;">Running-variable effective support (descriptive)</td>
+<td style="padding: 6px 8px;">-</td>
+<td style="padding: 6px 8px;">245.000 [PASS]</td>
+<td style="padding: 6px 8px;">-</td>
+<td style="padding: 6px 8px;">-</td>
+</tr>
+<tr style="border-top: 1px solid #EAECEE;">
+<td style="text-align: left; padding: 6px 8px;">Predetermined covariate continuity: prior_math (exploratory)</td>
+<td style="padding: 6px 8px;">-</td>
+<td style="padding: 6px 8px;">p=0.759 [PASS]</td>
+<td style="padding: 6px 8px;">-</td>
+<td style="padding: 6px 8px;">-</td>
+</tr>
+<tr style="border-top: 1px solid #EAECEE;">
+<td style="text-align: left; padding: 6px 8px;">Excluded-instrument relevance (robust Wald)</td>
+<td style="padding: 6px 8px;">-</td>
+<td style="padding: 6px 8px;">-</td>
+<td style="padding: 6px 8px;">p=0.000 [WARN]</td>
+<td style="padding: 6px 8px;">-</td>
+</tr>
+<tr style="border-top: 1px solid #EAECEE;">
+<td style="text-align: left; padding: 6px 8px;">Anderson-Rubin test (beta=0)</td>
+<td style="padding: 6px 8px;">-</td>
+<td style="padding: 6px 8px;">-</td>
+<td style="padding: 6px 8px;">p=0.000 [WARN]</td>
+<td style="padding: 6px 8px;">-</td>
+</tr>
+<tr style="border-top: 1px solid #EAECEE;">
+<td style="text-align: left; padding: 6px 8px;">Overidentification (robust J pending)</td>
+<td style="padding: 6px 8px;">-</td>
+<td style="padding: 6px 8px;">-</td>
+<td style="padding: 6px 8px;">0.000 [WARN]</td>
+<td style="padding: 6px 8px;">-</td>
+</tr>
+<tr style="border-top: 1px solid #EAECEE;">
+<td style="text-align: left; padding: 6px 8px;">Intercept-adjusted pre-treatment fit (descriptive)</td>
+<td style="padding: 6px 8px;">-</td>
+<td style="padding: 6px 8px;">-</td>
+<td style="padding: 6px 8px;">-</td>
+<td style="padding: 6px 8px;">0.378 [WARN]</td>
+</tr>
+<tr style="background: #F8F9F9; font-weight: 700; text-align: left; border-top: 1.5px solid #BDC3C7;"><td colspan="5" style="padding: 6px 8px;">Panel D: Sample Statistics</td></tr>
+<tr style="border-top: 1px solid #EAECEE;">
+<td style="text-align: left; padding: 6px 8px;">Observations (N)</td>
+<td style="padding: 6px 8px;">1,050</td>
+<td style="padding: 6px 8px;">1,200</td>
+<td style="padding: 6px 8px;">800</td>
+<td style="padding: 6px 8px;">338</td>
+</tr>
+<tr style="border-top: 1px solid #EAECEE;">
+<td style="text-align: left; padding: 6px 8px;">Treated Units</td>
+<td style="padding: 6px 8px;">95</td>
+<td style="padding: 6px 8px;">595</td>
+<td style="padding: 6px 8px;">800</td>
+<td style="padding: 6px 8px;">1</td>
+</tr>
+</tbody>
+<tfoot>
+<tr style="border-top: 2px solid #2C3E50;"><td colspan="5" style="text-align: left; padding: 8px; font-size: 11px; color: #5D6D7E;">
+<em>Notes:</em> * p &lt; 0.10, ** p &lt; 0.05, *** p &lt; 0.01. Standard errors reported in parentheses.</td></tr>
+</tfoot>
+</table>
+</div></div></div><div class="tab-panel"><div style="overflow-x:auto;background:#fff;color:#0f172a;padding:12px;border-radius:8px;">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 820px; border: 1px solid #D5D8DC; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.05); margin: 12px 0;">
+        <div style="background: #FFF3CD; color: #765300; padding: 10px 18px; font-size: 12px;">EXPERIMENTAL ESTIMATOR — reference statistical validation pending. Identifying assumptions are not verified by these diagnostics.</div>
+        <div style="background: #F8F9F9; padding: 14px 18px; border-bottom: 1px solid #D5D8DC; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <span style="font-size: 16px; font-weight: 700; color: #1B2631;">quasi: CallawaySantAnnaDiD</span>
+                <span style="font-size: 13px; color: #5D6D7E; margin-left: 8px;">(Outcome: <strong>score</strong>)</span>
+            </div>
+            <span style="background: #FFF3CD; color: #765300; padding: 3px 8px; border-radius: 12px; font-weight: 600; font-size: 12px;">CHECKS PASSED; IDENTIFICATION UNVERIFIED</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); background: #FFFFFF; border-bottom: 1px solid #EAECEE; text-align: center;">
+            <div style="padding: 12px; border-right: 1px solid #EAECEE;">
+                <div style="font-size: 11px; font-weight: 600; color: #7F8C8D; text-transform: uppercase;">Estimate (Post-treatment cohort-size-weighted ATT across identified (g,t) cells)</div>
+                <div style="font-size: 18px; font-weight: 700; color: #1B4F72; margin-top: 4px;">+4.3246</div>
+            </div>
+            <div style="padding: 12px; border-right: 1px solid #EAECEE;">
+                <div style="font-size: 11px; font-weight: 600; color: #7F8C8D; text-transform: uppercase;">Std. Error</div>
+                <div style="font-size: 18px; font-weight: 600; color: #2C3E50; margin-top: 4px;">0.2387</div>
+            </div>
+            <div style="padding: 12px; border-right: 1px solid #EAECEE;">
+                <div style="font-size: 11px; font-weight: 600; color: #7F8C8D; text-transform: uppercase;">p-value</div>
+                <div style="font-size: 18px; font-weight: 600; color: #117A65; margin-top: 4px;">0.0000</div>
+            </div>
+            <div style="padding: 12px;">
+                <div style="font-size: 11px; font-weight: 600; color: #7F8C8D; text-transform: uppercase;">95% Conf. Int.</div>
+                <div style="font-size: 15px; font-weight: 600; color: #2C3E50; margin-top: 6px;">[3.857, 4.792]</div>
+            </div>
+        </div>
+
+        <div style="padding: 16px; background: #FFFFFF;">
+            <div style="font-size: 13px; line-height: 1.5; color: #2C3E50; margin-bottom: 14px; padding: 10px 14px; background: #EBF5FB; border-left: 4px solid #2980B9; border-radius: 2px;">
+                <strong>Key Takeaway:</strong> The model estimates a 4.32 unit increase in score. The estimate is statistically significant at the specified threshold (p = 0.000); causal interpretation requires unverified design assumptions.
+            </div>
+
+            <h4 style="margin: 12px 0 8px 0; font-size: 13px; text-transform: uppercase; color: #566573; letter-spacing: 0.5px;">Identification & Diagnostics</h4>
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+                <thead>
+                    <tr style="background: #F4F6F6; color: #566573;">
+                        <th style="padding: 6px 8px;">Assumption / Gate</th>
+                        <th style="padding: 6px 8px; text-align: right;">Metric</th>
+                        <th style="padding: 6px 8px; text-align: right;">p-value</th>
+                        <th style="padding: 6px 8px; text-align: center;">Status</th>
+                        <th style="padding: 6px 8px;">Diagnostic Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+        <tr style="border-bottom: 1px solid #EAECEE;">
+            <td style="padding: 8px; font-weight: 500;">Unconditional pre-period placebo differences</td>
+            <td style="padding: 8px; text-align: right;">Wald Chi2 = 2.311</td>
+            <td style="padding: 8px; text-align: right;">0.510</td>
+            <td style="padding: 8px; text-align: center; color: #117A65; font-weight: 700;">PASS</td>
+            <td style="padding: 8px; font-size: 12px; color: #5D6D7E;">No detectable difference in observed adjacent-period placebo changes; this does not establish parallel trends.</td>
+        </tr>
+        
+                </tbody>
+            </table>
+
+            <details style="margin-top: 14px;">
+                <summary style="font-size: 12px; font-weight: 600; color: #2980B9; cursor: pointer;">Methods Draft & Citation</summary>
+                <div style="margin-top: 8px; padding: 10px; background: #F8F9F9; border-radius: 4px; font-size: 12px; color: #2C3E50;">
+                    <p style="margin: 0 0 8px 0;"><strong>Draft Methodology:</strong> An experimental balanced-panel group-time difference-in-differences estimator uses the last clean pretreatment period as baseline for post-adoption effects and universal preperiod comparisons with anticipation=0. Controls: not_yet_treated; estimator: dr_improved. Aggregation weights cohort size per eligible cell; unsupported cells are reported and excluded. Panel-unit influence functions are aggregated by independent cluster if requested, and condition on observed cohort composition; Rademacher multiplier max-t bands are exploratory. Reference parity and inferential coverage are not certified. Pretrend tests cannot establish identifying parallel trends.</p>
+                    <pre style="background: #EAEDED; padding: 8px; border-radius: 4px; overflow-x: auto; margin: 0; font-size: 11px;">@article{callaway2021difference,
+  title={Difference-in-differences with multiple time periods},
+  author={Callaway, Brantly and Sant&#x27;Anna, Pedro HC},
+  journal={Journal of Econometrics},
+  volume={225},
+  number={2},
+  pages={200--230},
+  year={2021}
+}</pre>
+                </div>
+            </details>
+        </div>
+    </div>
+    </div></div><div class="tab-panel"><pre><code>\begin{table}[htbp]
+\centering
+\caption{Cross-Design Policy Evaluation Summary}
+\label{tab:quasi_comparison}
+\begin{tabular}{lcccc}
+\toprule
+ &amp; \multicolumn{1}{c}{DiD (Imp. DR)} &amp; \multicolumn{1}{c}{Sharp RDD} &amp; \multicolumn{1}{c}{2SLS IV} &amp; \multicolumn{1}{c}{SDiD (Point)} \\
+ &amp; (1) &amp; (2) &amp; (3) &amp; (4) \\
+\midrule
+\multicolumn{5}{l}{\textbf{Panel A: Causal Estimates}} \\
+Treatment Effect &amp; +4.325*** &amp; +0.474*** &amp; +1.835*** &amp; -3.694 \\
+ &amp; (0.239) &amp; (0.081) &amp; (0.053) &amp; (N/A) \\
+\midrule
+\multicolumn{5}{l}{\textbf{Panel B: Model Specification}} \\
+Model Class &amp; CallawaySantAnnaDiD &amp; SharpRDD &amp; TwoStageLS &amp; SyntheticDiD \\
+Estimand &amp; Post-treatment cohort-size-weighted ATT across identified (g,t) cells &amp; Sharp RD local outcome discontinuity &amp; IV structural coefficient (causal interpretation requires valid instrument assumptions) &amp; Single-unit post-period average SDiD effect \\
+Outcome Variable &amp; score &amp; gpa &amp; wage &amp; consumption \\
+Inference &amp; improved\_dr\_ipt\_wls\_analytical\_normal\_experimental &amp; experimental\_bias\_corrected\_nn &amp; IV\_2SLS\_HC1 &amp; not\_available \\
+\midrule
+\multicolumn{5}{l}{\textbf{Panel C: Identification Diagnostics}} \\
+Diagnostic Status &amp; passed\_checks\_only &amp; warnings &amp; warnings &amp; warnings \\
+Unconditional pre-period placebo differences &amp; p=0.510 [PASS] &amp; - &amp; - &amp; - \\
+Exploratory Density-Jump Screen (not McCrary) &amp; - &amp; p=0.024 [WARN] &amp; - &amp; - \\
+Running-variable effective support (descriptive) &amp; - &amp; 245.000 [PASS] &amp; - &amp; - \\
+Predetermined covariate continuity: prior\_math (exploratory) &amp; - &amp; p=0.759 [PASS] &amp; - &amp; - \\
+Excluded-instrument relevance (robust Wald) &amp; - &amp; - &amp; p=0.000 [WARN] &amp; - \\
+Anderson-Rubin test (beta=0) &amp; - &amp; - &amp; p=0.000 [WARN] &amp; - \\
+Overidentification (robust J pending) &amp; - &amp; - &amp; 0.000 [WARN] &amp; - \\
+Intercept-adjusted pre-treatment fit (descriptive) &amp; - &amp; - &amp; - &amp; 0.378 [WARN] \\
+\midrule
+\multicolumn{5}{l}{\textbf{Panel D: Sample Statistics}} \\
+Observations (N) &amp; 1,050 &amp; 1,200 &amp; 800 &amp; 338 \\
+Treated Units &amp; 95 &amp; 595 &amp; 800 &amp; 1 \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}[flushleft]
+\small\item \textit{Notes:} * $p&lt;0.10$, ** $p&lt;0.05$, *** $p&lt;0.01$. Standard errors reported in parentheses.
+\end{tablenotes}
+\end{table}</code></pre></div><div class="tab-panel"><pre><code>#figure(
+  table(
+    columns: (2.2fr, 1.2fr, 1.2fr, 1.2fr, 1.2fr),
+    align: (left, center, center, center, center),
+    stroke: none,
+    table.hline(stroke: 1.5pt),
+    [], [*(1) DiD (Imp. DR)*], [*(2) Sharp RDD*], [*(3) 2SLS IV*], [*(4) SDiD (Point)*],
+    table.hline(stroke: 0.8pt),
+    table.cell(colspan: 5)[*Panel A: Causal Estimates*],
+    [Treatment Effect], [+4.325\*\*\*], [+0.474\*\*\*], [+1.835\*\*\*], [-3.694],
+    [], [(0.239)], [(0.081)], [(0.053)], [(N/A)],
+    table.hline(stroke: 0.5pt),
+    table.cell(colspan: 5)[*Panel B: Model Specification*],
+    [Model Class], [CallawaySantAnnaDiD], [SharpRDD], [TwoStageLS], [SyntheticDiD],
+    [Estimand], [Post-treatment cohort-size-weighted ATT across identified (g,t) cells], [Sharp RD local outcome discontinuity], [IV structural coefficient (causal interpretation requires valid instrument assumptions)], [Single-unit post-period average SDiD effect],
+    [Outcome Variable], [score], [gpa], [wage], [consumption],
+    [Inference], [improved\_dr\_ipt\_wls\_analytical\_normal\_experimental], [experimental\_bias\_corrected\_nn], [IV\_2SLS\_HC1], [not\_available],
+    table.hline(stroke: 0.5pt),
+    table.cell(colspan: 5)[*Panel C: Identification Diagnostics*],
+    [Diagnostic Status], [passed\_checks\_only], [warnings], [warnings], [warnings],
+    [Unconditional pre-period placebo differences], [p=0.510 \[PASS\]], [-], [-], [-],
+    [Exploratory Density-Jump Screen (not McCrary)], [-], [p=0.024 \[WARN\]], [-], [-],
+    [Running-variable effective support (descriptive)], [-], [245.000 \[PASS\]], [-], [-],
+    [Predetermined covariate continuity: prior\_math (exploratory)], [-], [p=0.759 \[PASS\]], [-], [-],
+    [Excluded-instrument relevance (robust Wald)], [-], [-], [p=0.000 \[WARN\]], [-],
+    [Anderson-Rubin test (beta=0)], [-], [-], [p=0.000 \[WARN\]], [-],
+    [Overidentification (robust J pending)], [-], [-], [0.000 \[WARN\]], [-],
+    [Intercept-adjusted pre-treatment fit (descriptive)], [-], [-], [-], [0.378 \[WARN\]],
+    table.hline(stroke: 0.5pt),
+    table.cell(colspan: 5)[*Panel D: Sample Statistics*],
+    [Observations (N)], [1,050], [1,200], [800], [338],
+    [Treated Units], [95], [595], [800], [1],
+    table.hline(stroke: 1.5pt),
+  ),
+  caption: [Cross-Design Policy Evaluation Summary],
+)</code></pre></div><div class="tab-panel"><pre><code>### Cross-Design Policy Evaluation Summary
+
+|  | (1) DiD (Imp. DR) | (2) Sharp RDD | (3) 2SLS IV | (4) SDiD (Point) |
+| :--- | :---: | :---: | :---: | :---: |
+| **Panel A: Causal Estimates** | | | | |
+| Treatment Effect | +4.325*** | +0.474*** | +1.835*** | -3.694 |
+|  | (0.239) | (0.081) | (0.053) | (N/A) |
+| **Panel B: Model Specification** | | | | |
+| Model Class | CallawaySantAnnaDiD | SharpRDD | TwoStageLS | SyntheticDiD |
+| Estimand | Post-treatment cohort-size-weighted ATT across identified (g,t) cells | Sharp RD local outcome discontinuity | IV structural coefficient (causal interpretation requires valid instrument assumptions) | Single-unit post-period average SDiD effect |
+| Outcome Variable | score | gpa | wage | consumption |
+| Inference | improved_dr_ipt_wls_analytical_normal_experimental | experimental_bias_corrected_nn | IV_2SLS_HC1 | not_available |
+| **Panel C: Identification Diagnostics** | | | | |
+| Diagnostic Status | passed_checks_only | warnings | warnings | warnings |
+| Unconditional pre-period placebo differences | p=0.510 [PASS] | - | - | - |
+| Exploratory Density-Jump Screen (not McCrary) | - | p=0.024 [WARN] | - | - |
+| Running-variable effective support (descriptive) | - | 245.000 [PASS] | - | - |
+| Predetermined covariate continuity: prior_math (exploratory) | - | p=0.759 [PASS] | - | - |
+| Excluded-instrument relevance (robust Wald) | - | - | p=0.000 [WARN] | - |
+| Anderson-Rubin test (beta=0) | - | - | p=0.000 [WARN] | - |
+| Overidentification (robust J pending) | - | - | 0.000 [WARN] | - |
+| Intercept-adjusted pre-treatment fit (descriptive) | - | - | - | 0.378 [WARN] |
+| **Panel D: Sample Statistics** | | | | |
+| Observations (N) | 1,050 | 1,200 | 800 | 338 |
+| Treated Units | 95 | 595 | 800 | 1 |
+
+*Notes:* * p &lt; 0.10, ** p &lt; 0.05, *** p &lt; 0.01. Standard errors in parentheses.</code></pre></div><div class="tab-panel"><pre><code>{
+  &quot;additional_metadata&quot;: {
+    &quot;design_audit&quot;: {
+      &quot;checks&quot;: [
+        &quot;columns_exist&quot;,
+        &quot;missing_data_explicit&quot;,
+        &quot;finite_numeric_values&quot;,
+        &quot;unique_panel_keys&quot;,
+        &quot;balanced_panel&quot;,
+        &quot;absorbing_treatment_support&quot;
+      ],
+      &quot;family&quot;: &quot;did&quot;,
+      &quot;n_excluded&quot;: 0,
+      &quot;n_periods&quot;: 7,
+      &quot;n_rows&quot;: 1050,
+      &quot;n_units&quot;: 150,
+      &quot;warnings&quot;: []
+    },
+    &quot;inference_settings&quot;: {
+      &quot;anticipation&quot;: 0,
+      &quot;base_period&quot;: &quot;universal&quot;,
+      &quot;cluster_field&quot;: null,
+      &quot;cluster_variance_correction&quot;: null,
+      &quot;cohort_weight_uncertainty&quot;: &quot;conditioned_on_observed_cohort_sizes&quot;,
+      &quot;control_group&quot;: &quot;not_yet_treated&quot;,
+      &quot;degrees_of_freedom&quot;: null,
+      &quot;est_method&quot;: &quot;dr_improved&quot;,
+      &quot;event_band&quot;: &quot;rademacher_multiplier_max_t_experimental&quot;,
+      &quot;method&quot;: &quot;improved_dr_ipt_wls_analytical_normal_experimental&quot;,
+      &quot;n_independent_clusters&quot;: null,
+      &quot;reference_certified&quot;: false,
+      &quot;se_unit&quot;: &quot;panel_unit&quot;
+    },
+    &quot;model_meta&quot;: {
+      &quot;anticipation&quot;: 0,
+      &quot;base_period&quot;: &quot;universal&quot;,
+      &quot;cadence&quot;: &quot;annual&quot;,
+      &quot;cluster&quot;: null,
+      &quot;cluster_variance_correction&quot;: null,
+      &quot;conditioning&quot;: &quot;Observed cohort sizes treated as fixed for aggregation inference&quot;,
+      &quot;control_group&quot;: &quot;not_yet_treated&quot;,
+      &quot;est_method&quot;: &quot;dr_improved&quot;,
+      &quot;inference_method&quot;: &quot;improved_dr_ipt_wls_analytical_if_experimental&quot;,
+      &quot;method_validation&quot;: &quot;experimental_unverified&quot;,
+      &quot;n_clusters&quot;: null,
+      &quot;propen
+  ...
+}</code></pre></div><div class="tab-panel"><pre><code>Estimation conducted via CallawaySantAnnaDiD indicates a statistically significant at the specified threshold treatment effect on score (estimate = 4.3246, SE = 0.2387, p = 0.0000). Diagnostic check status: passed_checks_only. Causal identification depends on assumptions not established by diagnostics alone.</code></pre></div></div>
+      <nav class="pager"><a href="observational.html">&larr; Observational ATT &amp; PSM</a><a href="index.html">Back to Overview &rarr;</a></nav>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

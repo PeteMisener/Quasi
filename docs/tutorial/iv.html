@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Instrumental Variables &amp; Weak-Instrument Inference — Quasi Tutorial</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <a class="brand-title" href="index.html">
+          Quasi
+          <span class="brand-sub">quasi-qed · v0.2.0.dev0</span>
+        </a>
+        <button id="theme-toggle" class="theme-btn" type="button">Dark</button>
+      </div>
+      <div>
+        <div class="nav-section-label">Tutorial Chapters</div>
+        <ul class="nav-list">
+          <li><a class="nav-link" href="index.html"><span class="nav-num">00</span><span>Overview &amp; Quickstart</span></a></li><li><a class="nav-link" href="did.html"><span class="nav-num">01</span><span>Difference-in-Differences</span></a></li><li><a class="nav-link" href="rdd.html"><span class="nav-num">02</span><span>Regression Discontinuity</span></a></li><li><a class="nav-link active" href="iv.html"><span class="nav-num">03</span><span>Instrumental Variables</span></a></li><li><a class="nav-link" href="its.html"><span class="nav-num">04</span><span>Interrupted Time Series</span></a></li><li><a class="nav-link" href="synthetic.html"><span class="nav-num">05</span><span>Synthetic Control &amp; SDiD</span></a></li><li><a class="nav-link" href="observational.html"><span class="nav-num">06</span><span>Observational ATT &amp; PSM</span></a></li><li><a class="nav-link" href="inference-power-reporting.html"><span class="nav-num">07</span><span>Inference, Power &amp; Reporting</span></a></li>
+        </ul>
+      </div>
+      <div class="toc-box">
+        <div class="nav-section-label">On This Page</div>
+        <ul><li><a href="#overid">1. 2SLS, Effective F, LIML &amp; CLR</a></li><li><a href="#tf-cluster">2. tF Intervals &amp; Clustered IV</a></li></ul>
+      </div>
+    </aside>
+    <main class="main">
+      <section class="hero">
+        <span class="badge">Chapter 03 · Endogenous Regressors</span>
+        <h1>Instrumental Variables &amp; Weak-Instrument Inference</h1>
+        <p>Two-Stage Least Squares, Montiel Olea–Pflueger Effective F, Lee et al. tF intervals, LIML/Fuller(α), Moreira CLR, Anderson–Rubin, and robust/clustered Hansen J.</p>
+      </section>
+      <div class="kpi-row"><div class="kpi"><div class="kpi-label">2SLS (True = 1.80)</div><div class="kpi-val">1.835</div><div class="kpi-sub">HC1 SE = 0.053</div></div><div class="kpi"><div class="kpi-label">Effective F (MOP)</div><div class="kpi-val">217.4</div><div class="kpi-sub">10% bias CV = 19.6</div></div><div class="kpi"><div class="kpi-label">LIML / Fuller(1)</div><div class="kpi-val">1.834</div><div class="kpi-sub">kappa = 1.0011</div></div><div class="kpi"><div class="kpi-label">Hansen J Overid</div><div class="kpi-val">p = 0.360</div><div class="kpi-sub">J = 0.84 (df = 1)</div></div></div><h2 id="overid">1. Overidentified 2SLS, Effective F, LIML &amp; Moreira CLR</h2><p>Conventional first-stage F-statistics assume homoskedastic errors and overstate instrument strength under heteroskedasticity or clustering. Quasi computes the <strong>Montiel Olea &amp; Pflueger (2013) Effective F</strong>, <strong>LIML / Fuller(&alpha;)</strong>, and exact <strong>Moreira (2003) CLR</strong> weak-IV-robust hypothesis tests.</p><div class="code-card"><div class="code-header"><span>2SLS + Weak-IV Suite</span><button class="copy-btn" type="button">Copy</button></div><pre><code>import quasi
+
+# 1. Overidentified 2SLS with HC1 robust SEs
+spec = quasi.IVDesign(
+    outcome=&quot;wage&quot;,
+    endogenous=&quot;schooling&quot;,
+    instruments=(&quot;z1&quot;, &quot;z2&quot;),
+    covariates=(&quot;experience&quot;,),
+    covariance=&quot;HC1&quot;,
+)
+iv_res = quasi.estimate(df_iv, design=spec)
+print(iv_res.summary())
+
+# 2. Montiel Olea &amp; Pflueger (2013) Effective F, LIML, Fuller(1), Moreira CLR, and Hansen J
+eff = iv_res.effective_f()
+liml = iv_res.liml(fuller_alpha=0.0)
+fuller = iv_res.liml(fuller_alpha=1.0)
+clr_0 = iv_res.clr_test(null_effect=0.0)
+clr_18 = iv_res.clr_test(null_effect=1.80)
+j_test = iv_res.gmm_overidentification_test()</code></pre><pre class="output-pre"><code>[EXPERIMENTAL] Research prototype; reference validation pending.
+======================================================================
+Two-Stage Least Squares (2SLS) | Outcome: wage
+======================================================================
+Endogenous Variable: schooling
+Instruments:         z1, z2
+2SLS coefficient:    +1.8350 (HC1 SE: 0.0532)
+p-value:             0.0000
+95% Conf. Interval:  [1.7308, 1.9393]
+First-Stage F-Stat:  194.80 (conventional; not strength certification)
+First-Stage Robust:  445.47 (chi2 test)
+AR null beta=0:      p = 0.0000 (weak-IV-robust test)
+Observations:        800
+----------------------------------------------------------------------
+Instrument Validity Diagnostics:
+  • Excluded-instrument relevance (robust Wald) [WARN] chi2(2) = 445.470 (p = 0.0000)
+  • Anderson-Rubin test (beta=0)   [WARN] AR chi2 = 224.321 (p = 0.0000)
+  • Overidentification (robust J pending) [WARN] Not available = 0.000 (-)
+======================================================================
+
+Effective F (MOP 2013): F_eff = 217.36 (K_eff = 1.99)
+  TSLS 5% / 10% relative-bias critical values: 32.71 / 19.58
+LIML estimate:     1.8337 (SE=0.0533, kappa=1.0011)
+Fuller(1) estimate:1.8352 (SE=0.0532, kappa=0.9999)
+Moreira CLR (H0=0.0):  stat=196.75, p=0.0004998
+Moreira CLR (H0=1.8):  stat=0.38, p=0.5337
+Two-step GMM Hansen J: J=0.837 (df=1, p=0.3601)</code></pre></div><table class="data-table"><thead><tr><th>Estimator</th><th>Estimate</th><th>SE</th><th>95% Lower</th><th>95% Upper</th></tr></thead><tbody><tr><td>2SLS (HC1)</td><td>1.8350</td><td>0.0532</td><td>1.7308</td><td>1.9393</td></tr><tr><td>LIML (HC1)</td><td>1.8337</td><td>0.0533</td><td>1.7291</td><td>1.9383</td></tr><tr><td>Fuller(1) (HC1)</td><td>1.8352</td><td>0.0532</td><td>1.7310</td><td>1.9394</td></tr><tr><td>2SLS (CR1, G=40)</td><td>1.8350</td><td>0.0558</td><td>1.7222</td><td>1.9479</td></tr></tbody></table><h2 id="tf-cluster">2. Just-Identified tF Intervals &amp; Clustered IV</h2><p>For single-instrument IV, <code>.tf_confidence_interval()</code> implements Lee, McCrary, Moreira &amp; Porter (2022, AER) <em>tF</em> critical values (returning (&minus;&infin;, +&infin;) below F = 3.8415 at &alpha; = 0.05). For clustered designs (G &ge; 10), Quasi refuses silent homoskedastic CLR and provides clustered Anderson–Rubin and opt-in clustered Hansen J tests.</p><div class="code-card"><div class="code-header"><span>tF Confidence Intervals &amp; Clustered IV</span><button class="copy-btn" type="button">Copy</button></div><pre><code># 3. Just-identified IV: Lee, McCrary, Moreira &amp; Porter (2022, AER) tF Confidence Interval
+iv_just = quasi.estimate(
+    df_iv,
+    design=quasi.IVDesign(
+        outcome=&quot;wage&quot;, endogenous=&quot;schooling&quot;, instruments=(&quot;z1&quot;,),
+        covariates=(&quot;experience&quot;,), covariance=&quot;HC1&quot;,
+    ),
+)
+print(f&quot;Standard Wald 95% CI: [{iv_just.ci_lower:.4f}, {iv_just.ci_upper:.4f}]&quot;)
+print(f&quot;Lee et al. tF 95% CI: [{iv_just.tf_confidence_interval()[0]:.4f}, {iv_just.tf_confidence_interval()[1]:.4f}]&quot;)
+
+# 4. One-way Clustered IV (CR1, requires G &gt;= 10) + Opt-in Clustered Hansen J
+iv_cl = quasi.estimate(
+    df_iv,
+    design=quasi.IVDesign(
+        outcome=&quot;wage&quot;, endogenous=&quot;schooling&quot;, instruments=(&quot;z1&quot;, &quot;z2&quot;),
+        covariates=(&quot;experience&quot;,), cluster=&quot;region&quot;, covariance=&quot;CR1&quot;,
+    ),
+)
+j_cl = iv_cl.gmm_overidentification_test(allow_clustered=True)
+print(f&quot;Clustered 2SLS (G=40): est={iv_cl.estimate:.4f}, SE={iv_cl.se:.4f}, Clustered J={j_cl.statistic:.3f} (p={j_cl.p_value:.4f})&quot;)</code></pre><pre class="output-pre"><code>Standard Wald 95% CI: [1.6835, 1.9227]
+Lee et al. tF 95% CI: [1.6835, 1.9227]
+Clustered 2SLS (G=40): est=1.8350, SE=0.0558, Clustered J=1.043 (p=0.3070)</code></pre></div><div class="callout warn"><div class="callout-title">Estimand Honesty (No Automatic LATE Claim)</div><div>Under heterogeneous treatment effects, 2SLS estimates a Local Average Treatment Effect (LATE) <em>only</em> if monotonicity holds alongside relevance and exclusion. Quasi intentionally avoids labeling IV estimates as LATE without monotonicity justification.</div></div>
+      <nav class="pager"><a href="rdd.html">&larr; Regression Discontinuity</a><a href="its.html">Interrupted Time Series &rarr;</a></nav>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+name: Independent reference validation (experimental)
+on:
+  workflow_dispatch:
+    inputs:
+      strict_release_gate:
+        description: Require external methodological approval and R reference coverage (currently BLOCKED)
+        type: boolean
+        default: false
+  schedule:
+    - cron: '12 6 * * 1'
+permissions:
+  contents: read
+jobs:
+  independent-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[validation]" pytest
+      - name: Confirm third-party reference package and dataset integrity
+        run: python -m validation.generate_references --check
+      - name: Real-data reference comparisons and validation-contract tests
+        run: python -m pytest -q tests/parity tests/validation
+      - name: Generate reference evidence dashboard
+        run: python -m validation.evidence_report --output validation/reports/reference_status.json
+      - name: Audit every public estimator and project-level release gate
+        run: python -m validation.release_readiness --output validation/reports/v1_release_readiness.json
+      - name: Experimental Monte Carlo evidence (informational, not approval)
+        run: python -m validation.run_simulations --scenarios iv_null its_null iv_weak --reps 100 --output validation/reports/monte_carlo.json
+      - name: Check existing numerical references (not a release approval)
+        run: python -m validation.gate
+      - name: Independent-research strict gate (must fail until requirements met)
+        if: ${{ inputs.strict_release_gate == true }}
+        run: python -m validation.gate --strict
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quasi-reference-evidence
+          path: validation/reports/*
+          retention-days: 30

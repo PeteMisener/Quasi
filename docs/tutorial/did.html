@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Difference-in-Differences &amp; Event Studies — Quasi Tutorial</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <a class="brand-title" href="index.html">
+          Quasi
+          <span class="brand-sub">quasi-qed · v0.2.0.dev0</span>
+        </a>
+        <button id="theme-toggle" class="theme-btn" type="button">Dark</button>
+      </div>
+      <div>
+        <div class="nav-section-label">Tutorial Chapters</div>
+        <ul class="nav-list">
+          <li><a class="nav-link" href="index.html"><span class="nav-num">00</span><span>Overview &amp; Quickstart</span></a></li><li><a class="nav-link active" href="did.html"><span class="nav-num">01</span><span>Difference-in-Differences</span></a></li><li><a class="nav-link" href="rdd.html"><span class="nav-num">02</span><span>Regression Discontinuity</span></a></li><li><a class="nav-link" href="iv.html"><span class="nav-num">03</span><span>Instrumental Variables</span></a></li><li><a class="nav-link" href="its.html"><span class="nav-num">04</span><span>Interrupted Time Series</span></a></li><li><a class="nav-link" href="synthetic.html"><span class="nav-num">05</span><span>Synthetic Control &amp; SDiD</span></a></li><li><a class="nav-link" href="observational.html"><span class="nav-num">06</span><span>Observational ATT &amp; PSM</span></a></li><li><a class="nav-link" href="inference-power-reporting.html"><span class="nav-num">07</span><span>Inference, Power &amp; Reporting</span></a></li>
+        </ul>
+      </div>
+      <div class="toc-box">
+        <div class="nav-section-label">On This Page</div>
+        <ul><li><a href="#estimation">1. Panel Audit &amp; Improved DR</a></li><li><a href="#aggregations">2. Group-Time &amp; Cohort Tables</a></li><li><a href="#honestdid">3. HonestDiD Sensitivity</a></li></ul>
+      </div>
+    </aside>
+    <main class="main">
+      <section class="hero">
+        <span class="badge">Chapter 01 · Panel Designs</span>
+        <h1>Difference-in-Differences &amp; Event Studies</h1>
+        <p>Callaway–Sant'Anna group-time ATT, Sant'Anna–Zhao Improved DR (IPT+WLS), simultaneous multiplier bands, and Rambachan–Roth HonestDiD sensitivity.</p>
+      </section>
+      <div class="kpi-row"><div class="kpi"><div class="kpi-label">Improved DR ATT</div><div class="kpi-val">+4.325</div><div class="kpi-sub">SE = 0.239 (uncond. 0.240)</div></div><div class="kpi"><div class="kpi-label">Unadjusted ATT (Biased)</div><div class="kpi-val">+4.333</div><div class="kpi-sub">SE = 0.301 (omits covariate trend)</div></div><div class="kpi"><div class="kpi-label">HonestDiD Breakdown</div><div class="kpi-val">&gt; 2.0</div><div class="kpi-sub">Relative magnitudes M_bar</div></div><div class="kpi"><div class="kpi-label">Panel Support</div><div class="kpi-val">1,050 rows</div><div class="kpi-sub">95 treated units, 0 skipped cells</div></div></div><div class="callout good"><div class="callout-title">Why Improved DR Matters Here</div><div>In this simulated hospital rollout, treatment probability depends on baseline <code>case_mix</code>, and outcomes also trend with <code>case_mix</code>. Unadjusted DiD picks up confounding trend bias (<code>+4.333</code>), while <code>est_method='dr_improved'</code> uses Sant'Anna &amp; Zhao (2020) Inverse Probability Tilting (IPT) + WLS to recover <code>+4.325</code> cleanly.</div></div><h2 id="estimation">1. Panel Audit &amp; Improved DR Estimation</h2><p>Always run <code>audit_panel()</code> before fitting panel estimators to catch duplicate keys, imbalanced rows, reversible treatment paths, or small cluster counts. Then declare an explicit <code>PanelDesign</code>.</p><div class="code-card"><div class="code-header"><span>Staggered DiD with Improved DR</span><button class="copy-btn" type="button">Copy</button></div><pre><code>import quasi
+from quasi.prep.audit import audit_panel
+
+# 1. Pre-flight structural panel audit (duplicates, balance, rollout type, cluster count)
+health = audit_panel(df, unit=&quot;hospital&quot;, time=&quot;year&quot;, treatment=&quot;treated&quot;)
+print(f&quot;Balanced={health.is_balanced}, Rollout={health.treatment_type}, G={health.cluster_count}, Viable={health.is_viable}&quot;)
+
+# 2. Staggered Callaway-Sant&#x27;Anna DiD with Improved Doubly Robust (Sant&#x27;Anna &amp; Zhao 2020 IPT + WLS)
+spec = quasi.PanelDesign(
+    outcome=&quot;score&quot;,
+    unit=&quot;hospital&quot;,
+    time=&quot;year&quot;,
+    first_treated=&quot;first_treated&quot;,
+    covariates=(&quot;case_mix&quot;,),
+    est_method=&quot;dr_improved&quot;,        # &#x27;unadjusted&#x27;, &#x27;dr&#x27; (traditional), or &#x27;dr_improved&#x27; (IPT+WLS)
+    control_group=&quot;not_yet_treated&quot;, # or &#x27;never_treated&#x27;
+    base_period=&quot;universal&quot;,         # relative to e = -1 (recommended for HonestDiD)
+    b_reps=499,
+    seed=42,
+)
+result = quasi.estimate(df, design=spec)
+print(result.summary())</code></pre><pre class="output-pre"><code>Balanced=True, Rollout=absorbing_staggered, G=150, Viable=True
+
+[EXPERIMENTAL] Group-time DiD; R parity and inference certification pending.
+======================================================================
+Staggered DiD | Outcome: score
+======================================================================
+Identified-cell-weighted ATT: +4.3246 (SE: 0.2387)
+p-value: 0.0000
+95% CI: [3.8568, 4.7924]
+Observations: 1,050; adopting units: 95
+Comparison: not_yet_treated; estimator: dr_improved; anticipation: 0; skipped cells: 0
+Event study (preperiods: universal baseline; anticipation window is not a placebo):
+  Event time         ATT       SE       95% simultaneous band
+     -4           -0.0889    0.3962   [-1.1288, +0.9509]
+     -3           +0.2718    0.2632   [-0.4190, +0.9626]
+     -2           -0.0872    0.2729   [-0.8035, +0.6291]
+     -1           +0.0000    0.0000   [+0.0000, +0.0000]
+     +0           +3.4377    0.2827   [+2.6959, +4.1796]
+     +1           +4.2358    0.2745   [+3.5152, +4.9563]
+     +2           +4.7275    0.2875   [+3.9730, +5.4819]
+     +3           +5.4129    0.3946   [+4.3774, +6.4485]
+Interpretation requires untreated parallel trends and no anticipation.
+======================================================================</code></pre></div><div class="figure-card"><img src="assets/did_event_study.png" alt="Event study plot generated by Quasi StaggeredDiD" loading="lazy" /><div class="figure-caption"><strong>Figure 1.</strong> Dynamic event-study ATT estimates with Rademacher multiplier simultaneous confidence bands (generated directly via <code>result.plot()</code>).</div></div><h2 id="aggregations">2. Group-Time, Cohort &amp; Calendar Aggregations</h2><p>Quasi keeps every identified <code>(g, t)</code> cell transparent—reporting treated/control support, base period, propensity range, and any excluded cells—so compositional shifts are never hidden.</p><div class="tabs"><div class="tab-bar"><button type="button" class="tab-btn active">Group-Time Cells</button><button type="button" class="tab-btn">Cohort Averages</button><button type="button" class="tab-btn">Calendar Averages</button></div><div class="tab-panel active"><table class="data-table"><thead><tr><th>cohort</th><th>time</th><th>event_time</th><th>estimate</th><th>se</th><th>n_treated_clusters</th><th>n_control_clusters</th><th>n_treated</th><th>n_controls</th><th>base_time</th><th>is_post</th><th>is_anticipatory</th><th>min_fitted_propensity</th><th>max_fitted_propensity</th></tr></thead><tbody><tr><td>2020</td><td>2017</td><td>-3</td><td>0.4049</td><td>0.3591</td><td>50</td><td>100</td><td>50</td><td>100</td><td>2019</td><td>False</td><td>False</td><td>0.2971</td><td>0.3728</td></tr><tr><td>2020</td><td>2018</td><td>-2</td><td>-0.1869</td><td>0.3182</td><td>50</td><td>100</td><td>50</td><td>100</td><td>2019</td><td>False</td><td>False</td><td>0.2971</td><td>0.3728</td></tr><tr><td>2020</td><td>2020</td><td>0</td><td>3.6489</td><td>0.3479</td><td>50</td><td>100</td><td>50</td><td>100</td><td>2019</td><td>True</td><td>False</td><td>0.2971</td><td>0.3728</td></tr><tr><td>2020</td><td>2021</td><td>1</td><td>4.4358</td><td>0.3579</td><td>50</td><td>55</td><td>50</td><td>55</td><td>2019</td><td>True</td><td>False</td><td>0.4558</td><td>0.4962</td></tr><tr><td>2020</td><td>2022</td><td>2</td><td>4.7350</td><td>0.3910</td><td>50</td><td>55</td><td>50</td><td>55</td><td>2019</td><td>True</td><td>False</td><td>0.4558</td><td>0.4962</td></tr><tr><td>2020</td><td>2023</td><td>3</td><td>5.4129</td><td>0.3946</td><td>50</td><td>55</td><td>50</td><td>55</td><td>2019</td><td>True</td><td>False</td><td>0.4558</td><td>0.4962</td></tr><tr><td>2021</td><td>2017</td><td>-4</td><td>-0.0889</td><td>0.3962</td><td>45</td><td>55</td><td>45</td><td>55</td><td>2020</td><td>False</td><td>False</td><td>0.3735</td><td>0.5228</td></tr><tr><td>2021</td><td>2018</td><td>-3</td><td>0.1238</td><td>0.3668</td><td>45</td><td>55</td><td>45</td><td>55</td><td>2020</td><td>False</td><td>False</td><td>0.3735</td><td>0.5228</td></tr><tr><td>2021</td><td>2019</td><td>-2</td><td>0.0235</td><td>0.4264</td><td>45</td><td>55</td><td>45</td><td>55</td><td>2020</td><td>False</td><td>False</td><td>0.3735</td><td>0.5228</td></tr><tr><td>2021</td><td>2021</td><td>0</td><td>3.2031</td><td>0.4052</td><td>45</td><td>55</td><td>45</td><td>55</td><td>2020</td><td>True</td><td>False</td><td>0.3735</td><td>0.5228</td></tr></tbody></table></div><div class="tab-panel"><table class="data-table"><thead><tr><th>cohort</th><th>estimate</th><th>se</th><th>identified_post_cells</th><th>contributing_treated_units</th></tr></thead><tbody><tr><td>2020.0000</td><td>4.5582</td><td>0.2942</td><td>4.0000</td><td>50.0000</td></tr><tr><td>2021.0000</td><td>3.9785</td><td>0.3358</td><td>3.0000</td><td>45.0000</td></tr></tbody></table></div><div class="tab-panel"><table class="data-table"><thead><tr><th>calendar</th><th>estimate</th><th>se</th><th>identified_post_cells</th><th>contributing_treated_units</th></tr></thead><tbody><tr><td>2020.0000</td><td>3.6489</td><td>0.3479</td><td>1.0000</td><td>50.0000</td></tr><tr><td>2021.0000</td><td>3.8518</td><td>0.2964</td><td>2.0000</td><td>95.0000</td></tr><tr><td>2022.0000</td><td>4.3933</td><td>0.3136</td><td>2.0000</td><td>95.0000</td></tr><tr><td>2023.0000</td><td>5.0842</td><td>0.3153</td><td>2.0000</td><td>95.0000</td></tr></tbody></table></div></div><h2 id="honestdid">3. HonestDiD Pre-Trends Sensitivity (Rambachan &amp; Roth 2023)</h2><p>Pre-trend hypothesis tests have low power and can distort post-test inference. Use <code>result.sensitivity_analysis()</code> to compute robust confidence intervals under <strong>Relative Magnitudes</strong> (&Delta;<sup>RM</sup>(M&#772;)) or <strong>Smoothness</strong> (&Delta;<sup>SD</sup>(M)), propagating full pre/post covariance.</p><div class="code-card"><div class="code-header"><span>HonestDiD Sensitivity Analysis</span><button class="copy-btn" type="button">Copy</button></div><pre><code># Rambachan &amp; Roth (2023) HonestDiD sensitivity under bounded parallel-trends violations
+honest_rm = result.sensitivity_analysis(
+    method=&quot;relative_magnitudes&quot;,
+    m_grid=[0.0, 0.5, 1.0, 1.5, 2.0],
+)
+honest_sd = result.sensitivity_analysis(
+    method=&quot;smoothness&quot;,
+    m_grid=[0.0, 0.1, 0.25, 0.5],
+)
+print(f&quot;Relative-magnitudes breakdown M_bar: {honest_rm.breakdown_value}&quot;)
+print(honest_rm.table.to_string(index=False))</code></pre></div><div class="tabs"><div class="tab-bar"><button type="button" class="tab-btn active">Relative Magnitudes (Delta^RM)</button><button type="button" class="tab-btn">Smoothness (Delta^SD)</button></div><div class="tab-panel active"><table class="data-table"><thead><tr><th>M</th><th>identified_set_low</th><th>identified_set_high</th><th>robust_ci_lower</th><th>robust_ci_upper</th><th>includes_zero</th></tr></thead><tbody><tr><td>0.0000</td><td>3.4377</td><td>3.4377</td><td>2.8837</td><td>3.9918</td><td>False</td></tr><tr><td>0.5000</td><td>3.2574</td><td>3.6181</td><td>2.7878</td><td>4.0876</td><td>False</td></tr><tr><td>1.0000</td><td>3.0770</td><td>3.7984</td><td>2.6120</td><td>4.2634</td><td>False</td></tr><tr><td>1.5000</td><td>2.8967</td><td>3.9788</td><td>2.4317</td><td>4.4437</td><td>False</td></tr><tr><td>2.0000</td><td>2.7163</td><td>4.1591</td><td>2.2513</td><td>4.6241</td><td>False</td></tr></tbody></table></div><div class="tab-panel"><table class="data-table"><thead><tr><th>M</th><th>identified_set_low</th><th>identified_set_high</th><th>robust_ci_lower</th><th>robust_ci_upper</th><th>includes_zero</th></tr></thead><tbody><tr><td>0.0000</td><td>3.3505</td><td>3.3505</td><td>2.4007</td><td>4.3003</td><td>False</td></tr><tr><td>0.1000</td><td>3.2505</td><td>3.4505</td><td>2.3808</td><td>4.3202</td><td>False</td></tr><tr><td>0.2500</td><td>3.1005</td><td>3.6005</td><td>2.2872</td><td>4.4138</td><td>False</td></tr><tr><td>0.5000</td><td>2.8505</td><td>3.8505</td><td>2.0529</td><td>4.6481</td><td>False</td></tr></tbody></table></div></div><div class="callout warn"><div class="callout-title">Identification &amp; Validation Reminder</div><div>Parallel trends and no-anticipation are untestable causal assumptions. Passing pre-trend checks or HonestDiD sensitivity does not prove identification, and external R <code>did</code>/<code>DRDID</code> parity verification remains pending.</div></div>
+      <nav class="pager"><a href="index.html">&larr; Overview &amp; Quickstart</a><a href="rdd.html">Regression Discontinuity &rarr;</a></nav>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Regression Discontinuity Design (Sharp &amp; Fuzzy) — Quasi Tutorial</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <a class="brand-title" href="index.html">
+          Quasi
+          <span class="brand-sub">quasi-qed · v0.2.0.dev0</span>
+        </a>
+        <button id="theme-toggle" class="theme-btn" type="button">Dark</button>
+      </div>
+      <div>
+        <div class="nav-section-label">Tutorial Chapters</div>
+        <ul class="nav-list">
+          <li><a class="nav-link" href="index.html"><span class="nav-num">00</span><span>Overview &amp; Quickstart</span></a></li><li><a class="nav-link" href="did.html"><span class="nav-num">01</span><span>Difference-in-Differences</span></a></li><li><a class="nav-link active" href="rdd.html"><span class="nav-num">02</span><span>Regression Discontinuity</span></a></li><li><a class="nav-link" href="iv.html"><span class="nav-num">03</span><span>Instrumental Variables</span></a></li><li><a class="nav-link" href="its.html"><span class="nav-num">04</span><span>Interrupted Time Series</span></a></li><li><a class="nav-link" href="synthetic.html"><span class="nav-num">05</span><span>Synthetic Control &amp; SDiD</span></a></li><li><a class="nav-link" href="observational.html"><span class="nav-num">06</span><span>Observational ATT &amp; PSM</span></a></li><li><a class="nav-link" href="inference-power-reporting.html"><span class="nav-num">07</span><span>Inference, Power &amp; Reporting</span></a></li>
+        </ul>
+      </div>
+      <div class="toc-box">
+        <div class="nav-section-label">On This Page</div>
+        <ul><li><a href="#sharp">1. Sharp RDD &amp; CJM Density</a></li><li><a href="#sensitivity">2. Robustness &amp; Donut Sensitivity</a></li><li><a href="#fuzzy">3. Fuzzy RDD &amp; Weak-IV AR</a></li></ul>
+      </div>
+    </aside>
+    <main class="main">
+      <section class="hero">
+        <span class="badge">Chapter 02 · Cutoff Designs</span>
+        <h1>Regression Discontinuity Design (Sharp &amp; Fuzzy)</h1>
+        <p>Scale-invariant CCT MSE/CER bandwidths, robust bias correction, nearest-neighbor VCE, CJM (2020) density test, donut sensitivity, and weak-IV Fuzzy RD AR tests.</p>
+      </section>
+      <div class="kpi-row"><div class="kpi"><div class="kpi-label">Sharp RD (RBC + NN)</div><div class="kpi-val">+0.474</div><div class="kpi-sub">SE = 0.081, h = 6.17</div></div><div class="kpi"><div class="kpi-label">CJM Density Test</div><div class="kpi-val">p = 0.850</div><div class="kpi-sub">T = -0.19 (continuity screen)</div></div><div class="kpi"><div class="kpi-label">Fuzzy RD (LATE)</div><div class="kpi-val">+0.872</div><div class="kpi-sub">1st stage = 0.446</div></div><div class="kpi"><div class="kpi-label">Fuzzy AR (H0=1.4)</div><div class="kpi-val">p = 0.152</div><div class="kpi-sub">H0=0.0 rejected (p=1.18e-01)</div></div></div><h2 id="sharp">1. Sharp RDD with Native CCT Bandwidth, RBC &amp; CJM Density</h2><p>Quasi's native <code>bandwidth='mserd'</code> and <code>'cerrd'</code> selectors use Gauss-Legendre boundary moments and scale-invariant derivative-variance regularization. Pairing <code>inference='bias_corrected'</code> with <code>vce='nn'</code> yields Calonico–Cattaneo–Titiunik style robust bias-corrected intervals without requiring external packages (while optional <code>rdrobust_mserd</code> delegation is also available).</p><div class="code-card"><div class="code-header"><span>Sharp RDD + CJM Density Test</span><button class="copy-btn" type="button">Copy</button></div><pre><code>import quasi
+
+# Native scale-invariant CCT MSE-optimal bandwidth + Robust Bias Correction + J=3 NN variance
+spec = quasi.RDDDesign(
+    outcome=&quot;gpa&quot;,
+    running_var=&quot;score&quot;,
+    cutoff=75.0,
+    bandwidth=&quot;mserd&quot;,                  # &#x27;mserd&#x27;, &#x27;cerrd&#x27;, &#x27;rdrobust_mserd&#x27;, or float
+    inference=&quot;bias_corrected&quot;,         # RBC using p+1 pilot polynomial
+    vce=&quot;nn&quot;,                           # CCT nearest-neighbor VCE (&#x27;hc0&#x27;..&#x27;hc3&#x27;, &#x27;nn&#x27;)
+    diagnostic_covariates=(&quot;prior_math&quot;,),
+)
+sharp_res = quasi.estimate(df_sharp, design=spec)
+print(sharp_res.summary())
+
+# Cattaneo, Jansson &amp; Ma (2020) local-polynomial CDF density continuity test
+cjm = sharp_res.cjm_density()
+print(f&quot;CJM Density Test: T = {cjm.statistic_value:.3f}, p = {cjm.p_value:.4f} [{cjm.status.value}]&quot;)</code></pre><pre class="output-pre"><code>[EXPERIMENTAL] Research prototype; reference validation pending.
+======================================================================
+Sharp RDD (Local polynomial) | Outcome: gpa (Cutoff: c = 75)
+======================================================================
+Local RD Estimate:  +0.4739 (SE: 0.0810, experimental_bias_corrected_nn)
+p-value:            0.0000
+95% Conf. Interval: [0.3152, 0.6325]
+Bandwidth (h):      6.1654 (Kernel: triangular, Order: 1)
+Effective Sample:   522 / 1,200 within bandwidth
+----------------------------------------------------------------------
+Identification Checks &amp; Diagnostics:
+  • Exploratory Density-Jump Screen (not McCrary) [WARN] Log Density Jump = -0.3812 (p = 0.0244)
+  • Running-variable effective support (descriptive) [PASS] Minimum distinct cutoff-side scores = 245.0000 (-)
+  • Predetermined covariate continuity: prior_math (exploratory) [PASS] Local discontinuity z (HC0) = -0.3071 (p = 0.7588)
+======================================================================
+
+CJM Density Test: T = -0.189, p = 0.8498 [PASS]</code></pre></div><div class="figure-card"><img src="assets/rdd_discontinuity.png" alt="Sharp RDD discontinuity plot generated by Quasi" loading="lazy" /><div class="figure-caption"><strong>Figure 2.</strong> Binned local scatter, local linear fits on either side of the cutoff <code>c = 75</code>, and shaded confidence bands (generated via <code>sharp_res.plot()</code>).</div></div><h2 id="sensitivity">2. Bandwidth, Kernel &amp; Donut-Hole Sensitivity</h2><p>Check sensitivity across bandwidth multiples, kernel choices, and donut-hole exclusions around the cutoff:</p><div class="tabs"><div class="tab-bar"><button type="button" class="tab-btn active">Bandwidth &amp; Kernel Grid</button><button type="button" class="tab-btn">Donut-Hole Sensitivity</button></div><div class="tab-panel active"><table class="data-table"><thead><tr><th>Specification</th><th>h</th><th>Estimate</th><th>SE</th><th>p-value</th><th>N_eff</th></tr></thead><tbody><tr><td>0.75x h (Tri, p=1)</td><td>4.6241</td><td>0.4930</td><td>0.0860</td><td>0.0000</td><td>399</td></tr><tr><td>0.75x h (Epa, p=1)</td><td>4.6241</td><td>0.5004</td><td>0.0835</td><td>0.0000</td><td>399</td></tr><tr><td>1.00x h (Tri, p=1) [BASELINE]</td><td>6.1654</td><td>0.4739</td><td>0.0810</td><td>0.0000</td><td>522</td></tr><tr><td>1.00x h (Epa, p=1)</td><td>6.1654</td><td>0.4711</td><td>0.0802</td><td>0.0000</td><td>522</td></tr><tr><td>1.25x h (Tri, p=1)</td><td>7.7068</td><td>0.4729</td><td>0.0790</td><td>0.0000</td><td>640</td></tr><tr><td>1.25x h (Epa, p=1)</td><td>7.7068</td><td>0.4716</td><td>0.0782</td><td>0.0000</td><td>640</td></tr></tbody></table></div><div class="tab-panel"><table class="data-table"><thead><tr><th>Specification</th><th>Excluded</th><th>Estimate</th><th>SE</th><th>p-value</th></tr></thead><tbody><tr><td>Donut |x-c| &lt;= 0 (exploratory)</td><td>0</td><td>0.4739</td><td>0.0810</td><td>0.0000</td></tr><tr><td>Donut |x-c| &lt;= 0.5 (exploratory)</td><td>32</td><td>0.5125</td><td>0.0975</td><td>0.0000</td></tr><tr><td>Donut |x-c| &lt;= 1 (exploratory)</td><td>75</td><td>0.6264</td><td>0.1385</td><td>0.0000</td></tr></tbody></table></div></div><h2 id="fuzzy">3. Fuzzy RDD &amp; Weak-IV Local Anderson–Rubin Test</h2><p>When crossing the cutoff shifts treatment probability by less than 1, use <code>FuzzyRDD</code> (or supply <code>treatment=</code> in <code>RDDDesign</code>). Because local Wald ratios are sensitive to weak first stages, Quasi includes the Feir, Lemieux &amp; Marmer (2016) weak-IV-robust local Anderson–Rubin test via <code>.ar_test()</code>.</p><div class="code-card"><div class="code-header"><span>Fuzzy RDD + Weak-IV AR Test</span><button class="copy-btn" type="button">Copy</button></div><pre><code># Fuzzy RDD with local Wald RBC linearization &amp; Feir-Lemieux-Marmer (2016) weak-IV AR test
+fuzzy_res = quasi.FuzzyRDD(
+    df_fuzzy, outcome=&quot;outcome&quot;, running_var=&quot;score&quot;, cutoff=75.0,
+    treatment=&quot;enrolled&quot;, bandwidth=&quot;mserd&quot;, inference=&quot;bias_corrected&quot;, vce=&quot;nn&quot;,
+).fit()
+print(fuzzy_res.summary())
+
+print(&quot;Weak-IV AR test (H0: tau = 0.00):&quot;, fuzzy_res.ar_test(null_effect=0.0))
+print(&quot;Weak-IV AR test (H0: tau = 1.40):&quot;, fuzzy_res.ar_test(null_effect=1.40))</code></pre><pre class="output-pre"><code>[EXPERIMENTAL] Research prototype; reference validation pending.
+======================================================================
+Fuzzy RDD (Local Wald ratio) | Outcome: outcome (Cutoff: c = 75)
+======================================================================
+Local RD Estimate:  +0.8716 (SE: 0.3735, experimental_bias_corrected_nn)
+p-value:            0.0196
+95% Conf. Interval: [0.1395, 1.6037]
+Bandwidth (h):      5.6840 (Kernel: triangular, Order: 1)
+Effective Sample:   490 / 1,200 within bandwidth
+----------------------------------------------------------------------
+Identification Checks &amp; Diagnostics:
+  • Fuzzy RD First Stage (exploratory) [PASS] Local first-stage Wald F (HC0) = 23.6854 (p = 0.0000)
+  • Exploratory Density-Jump Screen (not McCrary) [WARN] Log Density Jump = -0.3812 (p = 0.0244)
+  • Running-variable effective support (descriptive) [PASS] Minimum distinct cutoff-side scores = 228.0000 (-)
+======================================================================
+
+Weak-IV AR test (H0: tau = 0.00): stat=2.444, p=0.118
+Weak-IV AR test (H0: tau = 1.40): stat=2.057, p=0.1515</code></pre></div>
+      <nav class="pager"><a href="did.html">&larr; Difference-in-Differences</a><a href="iv.html">Instrumental Variables &rarr;</a></nav>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

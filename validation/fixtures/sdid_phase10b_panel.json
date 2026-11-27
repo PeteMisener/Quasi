@@ -1,0 +1,12 @@
+{
+  "sha256": "6583c59fd434083800c9625da17fa4a16508cdf504da5237ce870871a223f4f5",
+  "design": "one_treated_unit_single_onset",
+  "treated_unit": "treated",
+  "intervention_time": 9,
+  "n_donors": 12,
+  "n_pre": 9,
+  "n_post": 6,
+  "seed": 20261009,
+  "fixture_origin": "python_generated_for_independent_R_evaluation",
+  "status": "no_reference_executed"
+}

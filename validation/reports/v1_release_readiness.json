@@ -1,0 +1,296 @@
+{
+  "schema_version": 1,
+  "distribution": "quasi-qed",
+  "version": "0.2.0.dev0",
+  "stable_release_approved": false,
+  "method_count": 10,
+  "methods": [
+    {
+      "id": "staggered_did",
+      "release_tier": "experimental",
+      "public_entry_points": [
+        "StaggeredDiD"
+      ],
+      "external_reference": "R did / DRDID",
+      "parity_requirement": "Authentic cohort-time ATT and aggregation parity",
+      "inference_requirement": "Cluster-aware coverage, influence functions, simultaneous bands",
+      "known_limit": "Conditional design and treatment-timing restrictions",
+      "checks": {
+        "public_api": "passed_present",
+        "independent_point_parity": "blocked_not_approved",
+        "sampling_inference": "blocked_not_approved",
+        "independent_review": "blocked_not_approved",
+        "local_numerical_check": "not_available"
+      },
+      "blockers": [
+        "staggered_did: external reference parity not independently approved",
+        "staggered_did: sampling inference not independently approved",
+        "staggered_did: independent statistician approval absent"
+      ],
+      "research_approved": false
+    },
+    {
+      "id": "sharp_rdd",
+      "release_tier": "experimental",
+      "public_entry_points": [
+        "SharpRDD"
+      ],
+      "external_reference": "R/Python rdrobust",
+      "parity_requirement": "Fixed-bandwidth and selected-bandwidth point/SE/CI parity",
+      "inference_requirement": "Robust bias-corrected coverage and discrete-score behavior",
+      "known_limit": "Provisional density diagnostics and heuristic legacy bandwidth",
+      "checks": {
+        "public_api": "passed_present",
+        "independent_point_parity": "blocked_not_approved",
+        "sampling_inference": "blocked_not_approved",
+        "independent_review": "blocked_not_approved",
+        "local_numerical_check": "not_available"
+      },
+      "blockers": [
+        "sharp_rdd: external reference parity not independently approved",
+        "sharp_rdd: sampling inference not independently approved",
+        "sharp_rdd: independent statistician approval absent"
+      ],
+      "research_approved": false
+    },
+    {
+      "id": "fuzzy_rdd",
+      "release_tier": "experimental",
+      "public_entry_points": [
+        "FuzzyRDD"
+      ],
+      "external_reference": "R/Python rdrobust",
+      "parity_requirement": "Wald jump, first-stage, bias-correction, and SE parity",
+      "inference_requirement": "Weak-first-stage and challenging-design coverage",
+      "known_limit": "Inference and first-stage uncertainty remain experimental",
+      "checks": {
+        "public_api": "passed_present",
+        "independent_point_parity": "blocked_not_approved",
+        "sampling_inference": "blocked_not_approved",
+        "independent_review": "blocked_not_approved",
+        "local_numerical_check": "not_available"
+      },
+      "blockers": [
+        "fuzzy_rdd: external reference parity not independently approved",
+        "fuzzy_rdd: sampling inference not independently approved",
+        "fuzzy_rdd: independent statistician approval absent"
+      ],
+      "research_approved": false
+    },
+    {
+      "id": "iv_2sls",
+      "release_tier": "experimental",
+      "public_entry_points": [
+        "TwoStageLS"
+      ],
+      "external_reference": "Python linearmodels / Statsmodels",
+      "parity_requirement": "2SLS, robust/cluster covariance, and GMM J comparisons",
+      "inference_requirement": "Weak-IV confidence-set and AR inference calibration",
+      "known_limit": "Single-endogenous design and unavailable multiway clustering",
+      "checks": {
+        "public_api": "passed_present",
+        "independent_point_parity": "blocked_not_approved",
+        "sampling_inference": "blocked_not_approved",
+        "independent_review": "blocked_not_approved",
+        "local_numerical_check": "passed_numerical_unreviewed"
+      },
+      "blockers": [
+        "iv_2sls: external reference parity not independently approved",
+        "iv_2sls: sampling inference not independently approved",
+        "iv_2sls: independent statistician approval absent"
+      ],
+      "research_approved": false
+    },
+    {
+      "id": "its",
+      "release_tier": "experimental",
+      "public_entry_points": [
+        "InterruptedTimeSeries"
+      ],
+      "external_reference": "Statsmodels OLS/GLS/SARIMAX",
+      "parity_requirement": "HAC and AR(1) conditional numerical comparisons",
+      "inference_requirement": "Nominal coverage across serial dependence and finite samples",
+      "known_limit": "Observed undercoverage under strong AR(1) and misspecified AR(2)",
+      "checks": {
+        "public_api": "passed_present",
+        "independent_point_parity": "blocked_not_approved",
+        "sampling_inference": "blocked_not_approved",
+        "independent_review": "blocked_not_approved",
+        "local_numerical_check": "passed_numerical_unreviewed"
+      },
+      "blockers": [
+        "its: external reference parity not independently approved",
+        "its: sampling inference not independently approved",
+        "its: independent statistician approval absent"
+      ],
+      "research_approved": false
+    },
+    {
+      "id": "scm",
+      "release_tier": "experimental",
+      "public_entry_points": [
+        "SyntheticControl"
+      ],
+      "external_reference": "R Synth / validated SCM reference",
+      "parity_requirement": "Donor weights, predictor support, and point-effect parity",
+      "inference_requirement": "Design-appropriate placebo inference and uncertainty review",
+      "known_limit": "Outcome-only donor matching and unsupported primary SE",
+      "checks": {
+        "public_api": "passed_present",
+        "independent_point_parity": "blocked_not_approved",
+        "sampling_inference": "blocked_not_approved",
+        "independent_review": "blocked_not_approved",
+        "local_numerical_check": "not_available"
+      },
+      "blockers": [
+        "scm: external reference parity not independently approved",
+        "scm: sampling inference not independently approved",
+        "scm: independent statistician approval absent"
+      ],
+      "research_approved": false
+    },
+    {
+      "id": "sdid",
+      "release_tier": "experimental",
+      "public_entry_points": [
+        "SyntheticDiD"
+      ],
+      "external_reference": "R synthdid",
+      "parity_requirement": "Unit/time weights, regularization, and ATT parity",
+      "inference_requirement": "Validated placebo/bootstrap uncertainty by treated-unit regime",
+      "known_limit": "Uncertified primary SE/CI intentionally unavailable",
+      "checks": {
+        "public_api": "passed_present",
+        "independent_point_parity": "blocked_not_approved",
+        "sampling_inference": "blocked_not_approved",
+        "independent_review": "blocked_not_approved",
+        "local_numerical_check": "not_available"
+      },
+      "blockers": [
+        "sdid: external reference parity not independently approved",
+        "sdid: sampling inference not independently approved",
+        "sdid: independent statistician approval absent"
+      ],
+      "research_approved": false
+    },
+    {
+      "id": "aipw_att",
+      "release_tier": "experimental",
+      "public_entry_points": [
+        "AIPWATT"
+      ],
+      "external_reference": "Independent DR ATT implementation",
+      "parity_requirement": "Nuisance fits and ATT numerical parity across DGPs",
+      "inference_requirement": "Cross-fitted and joint nuisance uncertainty calibration",
+      "known_limit": "Observed undercoverage in some correct-nuisance simulations",
+      "checks": {
+        "public_api": "passed_present",
+        "independent_point_parity": "blocked_not_approved",
+        "sampling_inference": "blocked_not_approved",
+        "independent_review": "blocked_not_approved",
+        "local_numerical_check": "not_available"
+      },
+      "blockers": [
+        "aipw_att: external reference parity not independently approved",
+        "aipw_att: sampling inference not independently approved",
+        "aipw_att: independent statistician approval absent"
+      ],
+      "research_approved": false
+    },
+    {
+      "id": "ipw_att",
+      "release_tier": "experimental",
+      "public_entry_points": [
+        "IPWATT"
+      ],
+      "external_reference": "Independent weighted ATT implementation",
+      "parity_requirement": "Odds-weighted ATT and overlap parity",
+      "inference_requirement": "Finite-sample and cross-fitted variance validation",
+      "known_limit": "Cross-fitted IPW primary uncertainty unavailable",
+      "checks": {
+        "public_api": "passed_present",
+        "independent_point_parity": "blocked_not_approved",
+        "sampling_inference": "blocked_not_approved",
+        "independent_review": "blocked_not_approved",
+        "local_numerical_check": "not_available"
+      },
+      "blockers": [
+        "ipw_att: external reference parity not independently approved",
+        "ipw_att: sampling inference not independently approved",
+        "ipw_att: independent statistician approval absent"
+      ],
+      "research_approved": false
+    },
+    {
+      "id": "psm",
+      "release_tier": "experimental",
+      "public_entry_points": [
+        "PropensityScoreMatching"
+      ],
+      "external_reference": "Independent k-NN matching reference",
+      "parity_requirement": "ATT, tie policy, reuse, caliper, and balance parity",
+      "inference_requirement": "Matching-appropriate uncertainty / asymptotic review",
+      "known_limit": "Primary SE/CI intentionally unavailable",
+      "checks": {
+        "public_api": "passed_present",
+        "independent_point_parity": "blocked_not_approved",
+        "sampling_inference": "blocked_not_approved",
+        "independent_review": "blocked_not_approved",
+        "local_numerical_check": "not_available"
+      },
+      "blockers": [
+        "psm: external reference parity not independently approved",
+        "psm: sampling inference not independently approved",
+        "psm: independent statistician approval absent"
+      ],
+      "research_approved": false
+    }
+  ],
+  "project_requirements": [
+    {
+      "id": "owner_and_distribution",
+      "description": "Owner approval and distribution-name registry ownership",
+      "status": "pending",
+      "blocker": "project: Owner approval and distribution-name registry ownership"
+    },
+    {
+      "id": "license_and_provenance",
+      "description": "Independent software/data license and provenance review",
+      "status": "pending",
+      "blocker": "project: Independent software/data license and provenance review"
+    },
+    {
+      "id": "external_ci",
+      "description": "Passing fresh-dependency Python/OS CI and reference workflows",
+      "status": "pending",
+      "blocker": "project: Passing fresh-dependency Python/OS CI and reference workflows"
+    },
+    {
+      "id": "release_api",
+      "description": "Maintainer-approved public API and breaking-change migration",
+      "status": "pending",
+      "blocker": "project: Maintainer-approved public API and breaking-change migration"
+    },
+    {
+      "id": "independent_statistical_review",
+      "description": "Named independent statistical sign-off for each stable estimator",
+      "status": "pending",
+      "blocker": "project: Named independent statistical sign-off for each stable estimator"
+    },
+    {
+      "id": "security_and_docs",
+      "description": "Security contact, scanning, release documentation and user guidance",
+      "status": "pending",
+      "blocker": "project: Security contact, scanning, release documentation and user guidance"
+    },
+    {
+      "id": "coverage_and_fuzzing",
+      "description": "Method-specific test coverage, adverse-case and simulation gates",
+      "status": "pending",
+      "blocker": "project: Method-specific test coverage, adverse-case and simulation gates"
+    }
+  ],
+  "local_reference_failures": {},
+  "blocker_count": 37,
+  "note": "Readiness inventory is not statistical certification; pending checks cannot be passed by a green pytest run."
+}

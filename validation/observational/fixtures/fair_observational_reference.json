@@ -1,0 +1,24 @@
+{
+  "dataset": "Statsmodels Fair survey data, frozen for software numeric checks only",
+  "selection": "treatment := rate_marriage >= 4; not a causal treatment definition",
+  "data_sha256": "7ee28055b68739fa944c192222645dac20a78321332b96abf355437c08cd5220",
+  "outcome": "affairs",
+  "treatment": "treatment",
+  "covariates": [
+    "age",
+    "yrs_married",
+    "religious",
+    "educ"
+  ],
+  "statsmodels_version": "0.14.6",
+  "statsmodels_reference": {
+    "aipw_att": -1.0074139346680584,
+    "aipw_se_hc0": 0.09301312450407384,
+    "ipw_att": -0.9973181361998065,
+    "ipw_se_hc0": 0.09196192713481803,
+    "n": 6366,
+    "n_treated": 4926
+  },
+  "reference_inference": "independent numeric Jacobian HC0; not independently certified",
+  "causal_claim": false
+}

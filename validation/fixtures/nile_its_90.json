@@ -1,0 +1,92 @@
+{
+  "dataset": {
+    "columns": [
+      "year",
+      "volume"
+    ],
+    "license_review": "pending: refer to Statsmodels dataset attribution before redistribution",
+    "loader": "statsmodels.datasets.nile.load_pandas",
+    "original_source_attribution": "This data is first analyzed in:\n\n    Cobb, G. W. 1978. \"The Problem of the Nile: Conditional Solution to a\n        Changepoint Problem.\" *Biometrika*. 65.2, 243-51.",
+    "redistributed": false,
+    "rows": 100,
+    "sha256_canonical_csv": "88e97bea7249e5832a85e41aec6ce4b8f7b1b14aae930c8363da7f193286b598",
+    "source": "Statsmodels packaged public research dataset",
+    "substantive_identification_claim": false,
+    "upstream_copyright_statement": "This is public domain.",
+    "upstream_reference_module": "statsmodels.datasets.nile"
+  },
+  "design": {
+    "alpha": 0.1,
+    "hac_lag": 3,
+    "identification_note": "1921 is a numerical pseudointervention only, NOT an asserted causal event.",
+    "intervention_date": 1921.0,
+    "outcome": "volume",
+    "time": "year",
+    "use_correction": false,
+    "use_t": false
+  },
+  "fields": {
+    "ci_lower": {
+      "atol": 1e-07,
+      "reference_value": -73.62926382536611,
+      "rtol": 1e-08,
+      "status": "active"
+    },
+    "ci_upper": {
+      "atol": 1e-07,
+      "reference_value": 128.2576431771075,
+      "rtol": 1e-08,
+      "status": "active"
+    },
+    "estimate": {
+      "atol": 1e-07,
+      "reference_value": 27.3141896758707,
+      "rtol": 1e-08,
+      "status": "active"
+    },
+    "n_obs": {
+      "atol": 0,
+      "reference_value": 100.0,
+      "rtol": 0,
+      "status": "active"
+    },
+    "p_value": {
+      "atol": 1e-07,
+      "reference_value": 0.6562624307853051,
+      "rtol": 1e-08,
+      "status": "active"
+    },
+    "se": {
+      "atol": 1e-07,
+      "reference_value": 61.36926219284491,
+      "rtol": 1e-08,
+      "status": "active"
+    },
+    "slope_change": {
+      "atol": 1e-07,
+      "reference_value": 8.412340936374543,
+      "rtol": 1e-08,
+      "status": "active"
+    },
+    "slope_se": {
+      "atol": 1e-07,
+      "reference_value": 1.9567539150269586,
+      "rtol": 1e-08,
+      "status": "active"
+    }
+  },
+  "fixture_id": "nile_its_90",
+  "limitations": "Numerical parity is NOT inference validation or credible causal identification.",
+  "method": "its_hac",
+  "reference": {
+    "estimator": "statsmodels.regression.linear_model.OLS.fit(cov_type='HAC')",
+    "package": "statsmodels",
+    "version": "0.14.6"
+  },
+  "reference_kind": "independent_real_data_numerical",
+  "schema_version": 1,
+  "statistical_review": {
+    "reviewer": null,
+    "status": "pending"
+  }
+}

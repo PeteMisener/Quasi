@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interrupted Time Series &amp; Controlled ITS — Quasi Tutorial</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <a class="brand-title" href="index.html">
+          Quasi
+          <span class="brand-sub">quasi-qed · v0.2.0.dev0</span>
+        </a>
+        <button id="theme-toggle" class="theme-btn" type="button">Dark</button>
+      </div>
+      <div>
+        <div class="nav-section-label">Tutorial Chapters</div>
+        <ul class="nav-list">
+          <li><a class="nav-link" href="index.html"><span class="nav-num">00</span><span>Overview &amp; Quickstart</span></a></li><li><a class="nav-link" href="did.html"><span class="nav-num">01</span><span>Difference-in-Differences</span></a></li><li><a class="nav-link" href="rdd.html"><span class="nav-num">02</span><span>Regression Discontinuity</span></a></li><li><a class="nav-link" href="iv.html"><span class="nav-num">03</span><span>Instrumental Variables</span></a></li><li><a class="nav-link active" href="its.html"><span class="nav-num">04</span><span>Interrupted Time Series</span></a></li><li><a class="nav-link" href="synthetic.html"><span class="nav-num">05</span><span>Synthetic Control &amp; SDiD</span></a></li><li><a class="nav-link" href="observational.html"><span class="nav-num">06</span><span>Observational ATT &amp; PSM</span></a></li><li><a class="nav-link" href="inference-power-reporting.html"><span class="nav-num">07</span><span>Inference, Power &amp; Reporting</span></a></li>
+        </ul>
+      </div>
+      <div class="toc-box">
+        <div class="nav-section-label">On This Page</div>
+        <ul><li><a href="#single">1. Segmented ITS &amp; Error Models</a></li><li><a href="#cits">2. Two-Group Controlled ITS</a></li></ul>
+      </div>
+    </aside>
+    <main class="main">
+      <section class="hero">
+        <span class="badge">Chapter 04 · Time-Series Designs</span>
+        <h1>Interrupted Time Series &amp; Controlled ITS</h1>
+        <p>Segmented regression with Fourier seasonality, EWC fixed-b HAR, Andrews–Monahan prewhitened HAC, REML AR(1), in-time placebos, and Linden (2015) Controlled ITS.</p>
+      </section>
+      <div class="kpi-row"><div class="kpi"><div class="kpi-label">EWC HAR Level Shift</div><div class="kpi-val">-4.68</div><div class="kpi-sub">SE = 1.50 (true = -4.50)</div></div><div class="kpi"><div class="kpi-label">Prewhitened HAC SE</div><div class="kpi-val">1.19</div><div class="kpi-sub">vs NW-HAC SE = 0.86</div></div><div class="kpi"><div class="kpi-label">REML AR(1) Level</div><div class="kpi-val">-4.40</div><div class="kpi-sub">rho_hat = 0.00</div></div><div class="kpi"><div class="kpi-label">Controlled ITS Diff</div><div class="kpi-val">-3.18</div><div class="kpi-sub">Pre-trend p = 0.004</div></div></div><div class="callout good"><div class="callout-title">Serial Correlation Coverage Warning</div><div>Standard Bartlett Newey–West HAC (<code>error_model='hac'</code>) substantially under-covers under strong serial correlation (e.g., &rho; = 0.80). Prefer <code>error_model='ewc'</code> (Lazarus–Lewis–Stock–Watson fixed-<em>b</em> HAR with <em>t</em> critical values), <code>'hac_pw'</code> (Andrews–Monahan prewhitened HAC), or <code>'ar1_reml'</code> (Harville REML AR(1)).</div></div><h2 id="single">1. Single-Series Segmented ITS &amp; Serial-Correlation Models</h2><div class="code-card"><div class="code-header"><span>ITS Error Models &amp; In-Time Placebo</span><button class="copy-btn" type="button">Copy</button></div><pre><code>import quasi
+
+# Compare serial-correlation inference options with Fourier seasonality
+for mode in (&quot;hac&quot;, &quot;hac_pw&quot;, &quot;ewc&quot;, &quot;ar1_reml&quot;):
+    res = quasi.estimate(
+        df_its,
+        design=quasi.ITSDesign(
+            outcome=&quot;admissions&quot;, time=&quot;month&quot;, intervention_date=48,
+            error_model=mode, seasonal_period=12, seasonal_harmonics=1,
+        ),
+    )
+    print(f&quot;{mode:10s} | level={res.estimate:+.3f} (SE={res.se:.3f}) | 95% CI=[{res.ci_lower:+.3f}, {res.ci_upper:+.3f}]&quot;)
+
+# Covariance-aware post-intervention trajectory &amp; pre-period in-time placebo falsification
+ewc_res = quasi.InterruptedTimeSeries(
+    df_its, &quot;admissions&quot;, &quot;month&quot;, 48, error_model=&quot;ewc&quot;, seasonal_period=12,
+).fit()
+print(ewc_res.effect_trajectory().head())
+print(&quot;In-time placebo:&quot;, ewc_res.in_time_placebo())</code></pre><pre class="output-pre"><code>hac        | level=-4.685 (SE=0.865) | 95% CI=[-6.379, -2.990]
+hac_pw     | level=-4.685 (SE=1.188) | 95% CI=[-7.012, -2.357]
+ewc        | level=-4.685 (SE=1.496) | 95% CI=[-8.135, -1.234]
+ar1_reml   | level=-4.402 (SE=1.055) | 95% CI=[-6.499, -2.306]
+
+In-time placebo falsification (pre-period splits):
+ placebo_date  level_change  level_se  level_p  slope_change  slope_se  slope_p
+           16     -2.026891  2.447967 0.431682     -0.201661  0.230821 0.407758
+           24      3.078747  2.647609 0.278405     -0.029053  0.241994 0.907397
+           32      1.290237  2.365039 0.600255     -0.231881  0.119158 0.087533</code></pre></div><table class="data-table"><thead><tr><th>Error Model</th><th>Level Change</th><th>SE</th><th>95% Lower</th><th>95% Upper</th><th>Slope Change</th></tr></thead><tbody><tr><td>hac</td><td>-4.6845</td><td>0.8645</td><td>-6.3790</td><td>-2.9901</td><td>-0.0354</td></tr><tr><td>hac_pw</td><td>-4.6845</td><td>1.1877</td><td>-7.0125</td><td>-2.3566</td><td>-0.0354</td></tr><tr><td>ewc</td><td>-4.6845</td><td>1.4962</td><td>-8.1348</td><td>-1.2343</td><td>-0.0354</td></tr><tr><td>ar1_reml</td><td>-4.4023</td><td>1.0553</td><td>-6.4989</td><td>-2.3058</td><td>-0.0473</td></tr></tbody></table><div class="figure-card"><img src="assets/its_trajectory.png" alt="Interrupted Time Series trajectory and counterfactual extrapolation" loading="lazy" /><div class="figure-caption"><strong>Figure 3.</strong> Observed monthly series, seasonal fitted regression, and extrapolated counterfactual under <code>error_model='ewc'</code> (<code>ewc_res.plot()</code>).</div></div><h2 id="cits">2. Two-Group Controlled ITS (Linden 2015)</h2><p>When an untreated comparison series shares seasonal shocks or macro trends, <code>ControlledITS</code> estimates the difference-in-level-change (&beta;<sub>6</sub>), difference-in-slope-change (&beta;<sub>7</sub>), and tests pre-intervention slope parallelism (&beta;<sub>3</sub>) directly.</p><div class="code-card"><div class="code-header"><span>Controlled ITS (CITS)</span><button class="copy-btn" type="button">Copy</button></div><pre><code># Two-group Controlled Interrupted Time Series (Linden 2015) with EWC fixed-b HAR
+cits = quasi.ControlledITS(
+    df_cits, outcome=&quot;admissions&quot;, time=&quot;month&quot;, group=&quot;treated&quot;,
+    intervention_date=48, error_model=&quot;ewc&quot;,
+).fit()
+print(cits.summary())</code></pre><pre class="output-pre"><code>[EXPERIMENTAL] Controlled Interrupted Time Series (Linden 2015)
+======================================================================
+Outcome: admissions | Intervention: 48
+Diff-in-Level-Change: -3.1766 (SE: 1.5774, p=0.0788)
+95% CI: [-6.8141, 0.4609]
+Diff-in-Slope-Change: -0.0170 (SE: 0.0529, p=0.7566)
+Pre-Trend Difference: -0.0687 (p=0.0037)
+======================================================================</code></pre></div><div class="tabs"><div class="tab-bar"><button type="button" class="tab-btn active">Effect Trajectory (First 8 Post Periods)</button><button type="button" class="tab-btn">CITS Full Summary</button></div><div class="tab-panel active"><table class="data-table"><thead><tr><th>time</th><th>post_period</th><th>effect</th><th>se</th><th>ci_lower</th><th>ci_upper</th><th>cumulative_effect</th><th>cumulative_se</th><th>cumulative_ci_lower</th><th>cumulative_ci_upper</th></tr></thead><tbody><tr><td>48</td><td>0</td><td>-4.6845</td><td>1.4962</td><td>-8.1348</td><td>-1.2343</td><td>-4.6845</td><td>1.4962</td><td>-8.1348</td><td>-1.2343</td></tr><tr><td>49</td><td>1</td><td>-4.7199</td><td>1.4907</td><td>-8.1576</td><td>-1.2823</td><td>-9.4045</td><td>2.9865</td><td>-16.2914</td><td>-2.5175</td></tr><tr><td>50</td><td>2</td><td>-4.7553</td><td>1.4870</td><td>-8.1843</td><td>-1.3263</td><td>-14.1598</td><td>4.4722</td><td>-24.4727</td><td>-3.8468</td></tr><tr><td>51</td><td>3</td><td>-4.7907</td><td>1.4850</td><td>-8.2151</td><td>-1.3663</td><td>-18.9504</td><td>5.9546</td><td>-32.6818</td><td>-5.2190</td></tr><tr><td>52</td><td>4</td><td>-4.8260</td><td>1.4847</td><td>-8.2498</td><td>-1.4023</td><td>-23.7764</td><td>7.4350</td><td>-40.9216</td><td>-6.6313</td></tr><tr><td>53</td><td>5</td><td>-4.8614</td><td>1.4862</td><td>-8.2886</td><td>-1.4342</td><td>-28.6379</td><td>8.9147</td><td>-49.1951</td><td>-8.0806</td></tr><tr><td>54</td><td>6</td><td>-4.8968</td><td>1.4894</td><td>-8.3313</td><td>-1.4622</td><td>-33.5346</td><td>10.3949</td><td>-57.5054</td><td>-9.5638</td></tr><tr><td>55</td><td>7</td><td>-4.9321</td><td>1.4943</td><td>-8.3780</td><td>-1.4862</td><td>-38.4668</td><td>11.8771</td><td>-65.8554</td><td>-11.0781</td></tr></tbody></table></div><div class="tab-panel"><pre><code>[EXPERIMENTAL] Controlled Interrupted Time Series (Linden 2015)
+======================================================================
+Outcome: admissions | Intervention: 48
+Diff-in-Level-Change: -3.1766 (SE: 1.5774, p=0.0788)
+95% CI: [-6.8141, 0.4609]
+Diff-in-Slope-Change: -0.0170 (SE: 0.0529, p=0.7566)
+Pre-Trend Difference: -0.0687 (p=0.0037)
+======================================================================</code></pre></div></div>
+      <nav class="pager"><a href="iv.html">&larr; Instrumental Variables</a><a href="synthetic.html">Synthetic Control &amp; SDiD &rarr;</a></nav>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

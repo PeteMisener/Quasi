@@ -1,0 +1,150 @@
+{
+  "seed": 20261009,
+  "replications_per_scenario": 400,
+  "true_level_effect": 1.5,
+  "confidence_level": 0.95,
+  "reference_certified": false,
+  "status": "exploratory_not_certified",
+  "limitations": [
+    "Only one segmented seasonal data-generating process per error structure",
+    "AR1 conditional GLS covariance ignores uncertainty in estimated rho",
+    "Intervals are marginal level-effect inference, not prediction intervals",
+    "Monte Carlo coverage uncertainty remains substantial with limited replications",
+    "Neither method is validated against additional independent small-sample reference procedures",
+    "AR2 errors intentionally violate the AR1 model assumptions"
+  ],
+  "profiles": [
+    {
+      "scenario": "moderate_ar1",
+      "methods": [
+        {
+          "error_model": "hac",
+          "attempts": 400,
+          "fits": 400,
+          "fit_failures": 0,
+          "coverage_95_percent": 0.89,
+          "coverage_monte_carlo_se": 0.015644487847162013,
+          "mean_bias": -0.0053482060158594556,
+          "mean_interval_width": 1.042683460024483,
+          "mean_se": 0.2659955663086253,
+          "mean_rho": null,
+          "certified": false
+        },
+        {
+          "error_model": "ar1",
+          "attempts": 400,
+          "fits": 400,
+          "fit_failures": 0,
+          "coverage_95_percent": 0.9325,
+          "coverage_monte_carlo_se": 0.0125442965127583,
+          "mean_bias": -0.004228057979713429,
+          "mean_interval_width": 1.1962790630129363,
+          "mean_se": 0.3019393523728672,
+          "mean_rho": 0.2292364452673202,
+          "certified": false
+        },
+        {
+          "error_model": "ar1_mle",
+          "attempts": 400,
+          "fits": 400,
+          "fit_failures": 0,
+          "coverage_95_percent": 0.935,
+          "coverage_monte_carlo_se": 0.012326293035621046,
+          "mean_bias": -0.004288936494550488,
+          "mean_interval_width": 1.1962062987081712,
+          "mean_se": 0.30192098675255674,
+          "mean_rho": 0.22919391870171282,
+          "certified": false
+        }
+      ]
+    },
+    {
+      "scenario": "strong_ar1",
+      "methods": [
+        {
+          "error_model": "hac",
+          "attempts": 400,
+          "fits": 400,
+          "fit_failures": 0,
+          "coverage_95_percent": 0.675,
+          "coverage_monte_carlo_se": 0.023418742493993994,
+          "mean_bias": 0.024148557137603888,
+          "mean_interval_width": 2.302490086070963,
+          "mean_se": 0.587380713174505,
+          "mean_rho": null,
+          "certified": false
+        },
+        {
+          "error_model": "ar1",
+          "attempts": 400,
+          "fits": 400,
+          "fit_failures": 0,
+          "coverage_95_percent": 0.915,
+          "coverage_monte_carlo_se": 0.013944084767384337,
+          "mean_bias": -0.005403403202673553,
+          "mean_interval_width": 2.358905483044657,
+          "mean_se": 0.5953848193793952,
+          "mean_rho": 0.7725191997524676,
+          "certified": false
+        },
+        {
+          "error_model": "ar1_mle",
+          "attempts": 400,
+          "fits": 400,
+          "fit_failures": 0,
+          "coverage_95_percent": 0.915,
+          "coverage_monte_carlo_se": 0.013944084767384337,
+          "mean_bias": -0.005806648755895443,
+          "mean_interval_width": 2.358169456719098,
+          "mean_se": 0.5951990472473402,
+          "mean_rho": 0.7718179618192973,
+          "certified": false
+        }
+      ]
+    },
+    {
+      "scenario": "misspecified_ar2",
+      "methods": [
+        {
+          "error_model": "hac",
+          "attempts": 400,
+          "fits": 400,
+          "fit_failures": 0,
+          "coverage_95_percent": 0.535,
+          "coverage_monte_carlo_se": 0.02493867478435853,
+          "mean_bias": 0.10436073975197964,
+          "mean_interval_width": 2.1639657178935883,
+          "mean_se": 0.5520422147964641,
+          "mean_rho": null,
+          "certified": false
+        },
+        {
+          "error_model": "ar1",
+          "attempts": 400,
+          "fits": 400,
+          "fit_failures": 0,
+          "coverage_95_percent": 0.845,
+          "coverage_monte_carlo_se": 0.01809523417919757,
+          "mean_bias": 0.07779965748237955,
+          "mean_interval_width": 2.278673482176472,
+          "mean_se": 0.5751343618308815,
+          "mean_rho": 0.7251285680869227,
+          "certified": false
+        },
+        {
+          "error_model": "ar1_mle",
+          "attempts": 400,
+          "fits": 400,
+          "fit_failures": 0,
+          "coverage_95_percent": 0.845,
+          "coverage_monte_carlo_se": 0.01809523417919757,
+          "mean_bias": 0.0786413875040341,
+          "mean_interval_width": 2.279929933594631,
+          "mean_se": 0.5754514886110924,
+          "mean_rho": 0.7253720190636312,
+          "certified": false
+        }
+      ]
+    }
+  ]
+}

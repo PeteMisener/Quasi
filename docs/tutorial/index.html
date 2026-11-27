@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quasi — Complete Interactive Tutorial — Quasi Tutorial</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <a class="brand-title" href="index.html">
+          Quasi
+          <span class="brand-sub">quasi-qed · v0.2.0.dev0</span>
+        </a>
+        <button id="theme-toggle" class="theme-btn" type="button">Dark</button>
+      </div>
+      <div>
+        <div class="nav-section-label">Tutorial Chapters</div>
+        <ul class="nav-list">
+          <li><a class="nav-link active" href="index.html"><span class="nav-num">00</span><span>Overview &amp; Quickstart</span></a></li><li><a class="nav-link" href="did.html"><span class="nav-num">01</span><span>Difference-in-Differences</span></a></li><li><a class="nav-link" href="rdd.html"><span class="nav-num">02</span><span>Regression Discontinuity</span></a></li><li><a class="nav-link" href="iv.html"><span class="nav-num">03</span><span>Instrumental Variables</span></a></li><li><a class="nav-link" href="its.html"><span class="nav-num">04</span><span>Interrupted Time Series</span></a></li><li><a class="nav-link" href="synthetic.html"><span class="nav-num">05</span><span>Synthetic Control &amp; SDiD</span></a></li><li><a class="nav-link" href="observational.html"><span class="nav-num">06</span><span>Observational ATT &amp; PSM</span></a></li><li><a class="nav-link" href="inference-power-reporting.html"><span class="nav-num">07</span><span>Inference, Power &amp; Reporting</span></a></li>
+        </ul>
+      </div>
+      <div class="toc-box">
+        <div class="nav-section-label">On This Page</div>
+        <ul><li><a href="#architecture">Architecture Overview</a></li><li><a href="#selector">Interactive Design Selector</a></li><li><a href="#install">Installation &amp; Quickstart</a></li><li><a href="#chapters">All Tutorial Chapters</a></li></ul>
+      </div>
+    </aside>
+    <main class="main">
+      <section class="hero">
+        <span class="badge">Official Library Walkthrough</span>
+        <h1>Quasi — Complete Interactive Tutorial</h1>
+        <p>A hands-on, code-first guide to audited quasi-experimental econometrics in Python — backed by real executed outputs, diagnostic checks, and publication-ready plots.</p>
+      </section>
+      <div class="callout warn"><div class="callout-title">Pre-v1.0 Epistemic Honesty Notice</div><div>All outputs and plots in this tutorial are <strong>live-executed from Quasi v0.2.0.dev0</strong> on seeded policy simulations. All estimator families remain labeled <em>experimental</em> until external R/Python reference parity workflows (<code>did</code>, <code>DRDID</code>, <code>rdrobust</code>, <code>synthdid</code>, <code>linearmodels</code>) and independent statistical review complete. See <code>docs/code-review.md</code> and <code>docs/release-readiness.md</code>.</div></div><div class="kpi-row"><div class="kpi"><div class="kpi-label">Core Runtime Deps</div><div class="kpi-val">3 Packages</div><div class="kpi-sub">numpy, scipy, pandas only</div></div><div class="kpi"><div class="kpi-label">Estimator Families</div><div class="kpi-val">6 Families</div><div class="kpi-sub">12+ modern estimators &amp; tests</div></div><div class="kpi"><div class="kpi-label">Verified Tests</div><div class="kpi-val">524+ Passing</div><div class="kpi-sub">Contracts, invariants &amp; parity</div></div><div class="kpi"><div class="kpi-label">Python Support</div><div class="kpi-val">3.10 – 3.14</div><div class="kpi-sub">PEP 561 typed package</div></div></div><h2 id="architecture">Architecture &amp; Design Philosophy</h2><div class="figure-card" style="text-align:center;">
+  <svg viewBox="0 0 820 220" width="100%" style="max-width:780px;font-family:system-ui,sans-serif;" role="img" aria-label="Quasi library architecture diagram">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 1 L 10 5 L 0 9 z" fill="#64748b"/>
+      </marker>
+    </defs>
+    <rect x="12" y="65" width="160" height="90" rx="10" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+    <text x="92" y="98" text-anchor="middle" font-weight="700" font-size="13" fill="#0f172a">Data &amp; Prep</text>
+    <text x="92" y="118" text-anchor="middle" font-size="11" fill="#475569">pandas · Polars · Arrow</text>
+    <text x="92" y="135" text-anchor="middle" font-size="11" fill="#475569">audit_panel() · PeriodIdx</text>
+
+    <line x1="172" y1="110" x2="218" y2="110" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <rect x="220" y="55" width="175" height="110" rx="10" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
+    <text x="307" y="88" text-anchor="middle" font-weight="700" font-size="13" fill="#0f172a">Explicit DesignSpec</text>
+    <text x="307" y="108" text-anchor="middle" font-size="11" fill="#475569">Panel · RDD · IV · ITS</text>
+    <text x="307" y="125" text-anchor="middle" font-size="11" fill="#475569">Synthetic · Observational</text>
+    <text x="307" y="144" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0f766e">fail-closed validation</text>
+
+    <line x1="395" y1="110" x2="441" y2="110" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <rect x="443" y="45" width="175" height="130" rx="10" fill="#fefce8" stroke="#ca8a04" stroke-width="2"/>
+    <text x="530" y="76" text-anchor="middle" font-weight="700" font-size="13" fill="#0f172a">Estimators &amp; Inference</text>
+    <text x="530" y="96" text-anchor="middle" font-size="11" fill="#475569">WLS / 2SLS / Simplex QP</text>
+    <text x="530" y="113" text-anchor="middle" font-size="11" fill="#475569">CR2 · Multi-way · WCB</text>
+    <text x="530" y="130" text-anchor="middle" font-size="11" fill="#475569">EWC HAR · REML · CWZ</text>
+    <text x="530" y="149" text-anchor="middle" font-size="11" fill="#475569">HonestDiD · CLR · OVB</text>
+
+    <line x1="618" y1="110" x2="664" y2="110" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <rect x="666" y="55" width="142" height="110" rx="10" fill="#fdf2f8" stroke="#be185d" stroke-width="2"/>
+    <text x="737" y="88" text-anchor="middle" font-weight="700" font-size="13" fill="#0f172a">QEDResult</text>
+    <text x="737" y="108" text-anchor="middle" font-size="11" fill="#475569">LaTeX · Typst · HTML</text>
+    <text x="737" y="125" text-anchor="middle" font-size="11" fill="#475569">Matplotlib Figures</text>
+    <text x="737" y="142" text-anchor="middle" font-size="11" fill="#475569">JSON Record · AI</text>
+  </svg>
+  <div class="figure-caption"><strong>Architecture Overview.</strong> Every Quasi workflow flows from audited input data through an immutable <code>DesignSpec</code> into rank- and support-checked estimators backed by <code>quasi.inference</code>, emitting a structured <code>QEDResult</code>.</div>
+</div>
+<h2 id="selector">Choose Your Research Design</h2><div class="wizard" id="wizard">
+  <div style="font-weight:800;font-size:1.05rem;">Interactive Design Selector</div>
+  <p style="margin:4px 0 0;color:var(--muted);font-size:0.9rem;">Pick the empirical structure of your study to see the recommended <code>DesignSpec</code> and chapter guide:</p>
+  <div class="wizard-btns">
+    <button type="button" class="wizard-btn active" data-key="did">Staggered Panel Rollout</button>
+    <button type="button" class="wizard-btn" data-key="rdd">Score Cutoff / Threshold</button>
+    <button type="button" class="wizard-btn" data-key="iv">Endogenous Treatment + IV</button>
+    <button type="button" class="wizard-btn" data-key="its">Single / Controlled Time Series</button>
+    <button type="button" class="wizard-btn" data-key="synth">Single Treated Unit + Donors</button>
+    <button type="button" class="wizard-btn" data-key="obs">Cross-Sectional Covariates</button>
+  </div>
+  <div id="wizard-output" class="wizard-out"></div>
+</div>
+<h2 id="install">Installation &amp; Quickstart</h2><div class="code-card"><div class="code-header"><span>Shell — Install Core or Full Extras</span><button class="copy-btn" type="button">Copy</button></div><pre><code># Core runtime (only numpy, scipy, pandas — zero heavy dependencies)
+pip install -e .
+
+# With plotting, rich console tables, Polars, scikit-learn ML learners, and validation tools
+pip install -e &quot;.[all,dev]&quot;</code></pre></div><div class="code-card"><div class="code-header"><span>Python — Explicit DesignSpec Quickstart</span><button class="copy-btn" type="button">Copy</button></div><pre><code>import quasi
+
+# 1. Declare an explicit, immutable statistical design (validated before fitting)
+spec = quasi.PanelDesign(
+    outcome=&quot;score&quot;,
+    unit=&quot;hospital&quot;,
+    time=&quot;year&quot;,
+    first_treated=&quot;first_treated&quot;,
+    covariates=(&quot;case_mix&quot;,),
+    est_method=&quot;dr_improved&quot;,
+    control_group=&quot;not_yet_treated&quot;,
+    base_period=&quot;universal&quot;,
+)
+
+# 2. Estimate, inspect summary, and serialize audited JSON provenance
+result = quasi.estimate(df, design=spec)
+print(result.summary())
+record = quasi.ResultRecord.from_json(result.to_json())
+print(&quot;Identification status:&quot;, record.identification_status)  # always &#x27;not_established&#x27;</code></pre><pre class="output-pre"><code>[EXPERIMENTAL] Group-time DiD; R parity and inference certification pending.
+======================================================================
+Staggered DiD | Outcome: score
+======================================================================
+Identified-cell-weighted ATT: +4.3246 (SE: 0.2387)
+p-value: 0.0000
+95% CI: [3.8568, 4.7924]
+Observations: 1,050; adopting units: 95
+Comparison: not_yet_treated; estimator: dr_improved; anticipation: 0; skipped cells: 0
+Event study (preperiods: universal baseline; anticipation window is not a placebo):
+  Event time         ATT       SE       95% simultaneous band
+     -4           -0.0889    0.3962   [-1.1288, +0.9509]
+     -3           +0.2718    0.2632   [-0.4190, +0.9626]
+     -2           -0.0872    0.2729   [-0.8035, +0.6291]
+     -1           +0.0000    0.0000   [+0.0000, +0.0000]
+     +0           +3.4377    0.2827   [+2.6959, +4.1796]
+     +1           +4.2358    0.2745   [+3.5152, +4.9563]
+     +2           +4.7275    0.2875   [+3.9730, +5.4819]
+     +3           +5.4129    0.3946   [+4.3774, +6.4485]
+Interpretation requires untreated parallel trends and no anticipation.
+======================================================================
+Identification status: not_established</code></pre></div><h2 id="chapters">Explore All Tutorial Chapters</h2><div class="card-grid">
+  <a class="card" href="did.html"><span class="card-kicker">Chapter 01</span><span class="card-title">Difference-in-Differences</span><p class="card-desc">Callaway–Sant'Anna ATT(g,t), Sant'Anna–Zhao Improved DR, simultaneous bands, and HonestDiD sensitivity.</p></a>
+  <a class="card" href="rdd.html"><span class="card-kicker">Chapter 02</span><span class="card-title">Regression Discontinuity</span><p class="card-desc">Native scale-invariant CCT mserd/cerrd, RBC + NN variance, CJM density test, donut &amp; weak-IV Fuzzy AR.</p></a>
+  <a class="card" href="iv.html"><span class="card-kicker">Chapter 03</span><span class="card-title">Instrumental Variables</span><p class="card-desc">2SLS, Montiel Olea–Pflueger Effective F, Lee et al. tF CIs, LIML/Fuller, Moreira CLR, clustered Hansen J.</p></a>
+  <a class="card" href="its.html"><span class="card-kicker">Chapter 04</span><span class="card-title">Interrupted Time Series</span><p class="card-desc">EWC fixed-b HAR, Andrews–Monahan prewhitened HAC, REML AR(1), seasonality, placebos &amp; Controlled ITS.</p></a>
+  <a class="card" href="synthetic.html"><span class="card-kicker">Chapter 05</span><span class="card-title">Synthetic Control &amp; SDiD</span><p class="card-desc">Classic SCM, intercept-centered SDiD with sparsification, Ridge Augmented SCM, and CWZ conformal CIs.</p></a>
+  <a class="card" href="observational.html"><span class="card-kicker">Chapter 06</span><span class="card-title">Observational ATT &amp; PSM</span><p class="card-desc">Cross-fitted &amp; stabilized AIPW, IPW, k-NN PSM with Abadie–Imbens SE, Love plots &amp; Cinelli–Hazlett OVB.</p></a>
+  <a class="card" href="inference-power-reporting.html"><span class="card-kicker">Chapter 07</span><span class="card-title">Inference, Power &amp; Reporting</span><p class="card-desc">CR2, multi-way cluster, Wild Cluster Bootstrap, BPW/CCT/Monte Carlo power, LaTeX/Typst/HTML &amp; AI.</p></a>
+</div>
+
+      <nav class="pager"><span></span><a href="did.html">Difference-in-Differences &rarr;</a></nav>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

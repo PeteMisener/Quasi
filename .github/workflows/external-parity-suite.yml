@@ -1,0 +1,200 @@
+# Consolidated external R & Python reference parity workflow (candidate evidence only).
+# Execution produces SHA-256-attested comparison artifacts for independent statistical
+# review; it does NOT automatically certify Quasi or authorize public release.
+name: External reference parity (R + Python)
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which external reference suite(s) to run
+        type: choice
+        default: all
+        options:
+          - all
+          - full-suite
+          - did-r
+          - rdd-cross-language
+          - iv-linearmodels
+          - sdid-r
+          - observational-reference
+permissions:
+  contents: read
+
+jobs:
+  full-suite:
+    if: ${{ inputs.target == 'all' || inputs.target == 'full-suite' || inputs.target == '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.4.3'
+          use-public-rspm: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install authentic R reference libraries
+        run: Rscript -e 'install.packages(c("did", "DRDID", "rdrobust", "digest", "synthdid", "jsonlite"), repos="https://cloud.r-project.org")'
+      - name: Install Quasi and independent Python reference packages
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[validation]' 'linearmodels>=6,<8' 'rdrobust'
+      - name: Run unified cross-method numerical reference suite (strict, fail-closed)
+        run: |
+          python -m validation.external_suite \
+            --output validation/reports/external_suite.json --strict
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cross-method-numerical-reference-evidence
+          path: |
+            validation/reports/external_suite.json
+            validation/reports/external_suite_external_outputs/
+          if-no-files-found: warn
+          retention-days: 90
+
+  did-r:
+    if: ${{ inputs.target == 'all' || inputs.target == 'did-r' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.4.3'
+          use-public-rspm: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install R did and DRDID
+        run: Rscript -e 'install.packages(c("did", "DRDID"), repos="https://cloud.r-project.org")'
+      - name: Produce external R DiD reference fixtures
+        run: Rscript validation/r/phase6_did_external_reference.R validation/reports/r_phase6
+      - name: Compare Quasi DiD against R did/DRDID
+        run: |
+          python -m pip install -e '.[validation]'
+          python -m validation.compare_phase6_r validation/reports/r_phase6 --report validation/reports/r_phase6_candidate.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: did-r-parity-evidence
+          path: validation/reports/r_phase6*
+          retention-days: 90
+
+  rdd-cross-language:
+    if: ${{ inputs.target == 'all' || inputs.target == 'rdd-cross-language' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.4.3'
+          use-public-rspm: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install R and Python rdrobust references
+        run: |
+          Rscript -e 'install.packages(c("rdrobust", "digest", "jsonlite"), repos="https://cloud.r-project.org")'
+          python -m pip install -e '.[validation]' rdrobust
+      - name: Record reference environment and run R + Python + cross-language comparators
+        run: |
+          mkdir -p rdd-parity-evidence
+          python -m pip freeze > rdd-parity-evidence/python-freeze.txt
+          Rscript -e 'print(sessionInfo())' > rdd-parity-evidence/r-session.txt
+          git rev-parse HEAD > rdd-parity-evidence/commit.txt
+          Rscript validation/r/phase7_rd_external_reference.R \
+            validation/fixtures/rdd_phase7_fixed.csv rdd-parity-evidence/r-reference.csv
+          python -m validation.compare_phase7_r \
+            --reference rdd-parity-evidence/r-reference.csv \
+            --output rdd-parity-evidence/quasi-vs-r.json
+          python -m validation.compare_python_rdrobust \
+            --output rdd-parity-evidence/quasi-vs-python.json
+          python -m validation.crosscheck_rdd_references \
+            --r-reference rdd-parity-evidence/r-reference.csv \
+            --python-reference rdd-parity-evidence/quasi-vs-python.json \
+            --output rdd-parity-evidence/r-vs-python.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rdd-cross-language-parity-evidence
+          path: rdd-parity-evidence/
+          retention-days: 90
+
+  iv-linearmodels:
+    if: ${{ inputs.target == 'all' || inputs.target == 'iv-linearmodels' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Compare 2SLS and two-step GMM Hansen J against linearmodels
+        run: |
+          python -m pip install -e '.[validation]' 'linearmodels>=6,<8'
+          python -m validation.iv_linearmodels_parity --output validation/reports/iv_linearmodels_parity.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iv-linearmodels-parity-evidence
+          path: validation/reports/iv_linearmodels_parity.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  sdid-r:
+    if: ${{ inputs.target == 'all' || inputs.target == 'sdid-r' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.4.3'
+          use-public-rspm: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install R synthdid and compare ATT, weights, and fixed-draw placebos
+        run: |
+          Rscript -e 'install.packages(c("synthdid", "jsonlite"), repos="https://cloud.r-project.org")'
+          mkdir -p validation/reports
+          Rscript validation/r/phase10b_sdid_reference.R validation/reports/sdid_phase10b_r.json
+          python -m pip install -e .
+          python -m validation.sdid_phase10b_reference validation/reports/sdid_phase10b_r.json --output validation/reports/sdid_phase10b_candidate.json
+          Rscript validation/r/phase10c_sdid_fixed_draw_placebos.R validation/reports/sdid_phase10c_r.json
+          python -m validation.sdid_phase10c_placebo_reference validation/reports/sdid_phase10c_r.json --output validation/reports/sdid_phase10c_candidate.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sdid-r-parity-evidence
+          path: validation/reports/sdid_phase10*.json
+          retention-days: 90
+
+  observational-reference:
+    if: ${{ inputs.target == 'all' || inputs.target == 'observational-reference' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Run observational real-data numerical benchmark and tests
+        run: |
+          python -m pip install -e '.[validation]' pytest
+          python -m validation.observational.reference_phase11b | tee observational-reference.json
+          python -m pytest -q tests/observational
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: observational-reference-evidence
+          path: observational-reference.json
+          if-no-files-found: ignore
+          retention-days: 90

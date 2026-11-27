@@ -1,0 +1,36 @@
+name: Documentation
+on:
+  push:
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'README.md'
+      - 'CHANGELOG.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install documentation dependencies
+        run: python -m pip install -e ".[docs]"
+      - name: Build documentation strictly
+        run: mkdocs build --strict
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quasi-docs-site
+          path: site/
+          retention-days: 14

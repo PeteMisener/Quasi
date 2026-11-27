@@ -1,0 +1,70 @@
+{
+  "dataset": {
+    "columns": [
+      "invest",
+      "value",
+      "capital",
+      "firm",
+      "year"
+    ],
+    "license_review": "pending: refer to Statsmodels dataset attribution before redistribution",
+    "loader": "statsmodels.datasets.grunfeld.load_pandas",
+    "original_source_attribution": "This is the Grunfeld (1950) Investment Data.\n\nThe source for the data was the original 11-firm data set from Grunfeld's Ph.D.\nthesis recreated by Kleiber and Zeileis (2008) \"The Grunfeld Data at 50\".\nThe data can be found here.\nhttp://statmath.wu-wien.ac.at/~zeileis/grunfeld/\n\nFor a note on the many versions of the Grunfeld data circulating see:\nhttp://www.stanford.edu/~clint/bench/grunfeld.htm",
+    "redistributed": false,
+    "rows": 220,
+    "sha256_canonical_csv": "25e77e2ea09311a32af4f84a53a7a6632eb7238a04a6387a9f636d7d75d26c3c",
+    "source": "Statsmodels packaged public research dataset",
+    "substantive_identification_claim": false,
+    "upstream_copyright_statement": "This is public domain.",
+    "upstream_reference_module": "statsmodels.datasets.grunfeld"
+  },
+  "design": {
+    "alpha": 0.05,
+    "covariates": [],
+    "endogenous": "value",
+    "identification_note": "Numerical regression check only; instrument exclusion/exogeneity NOT justified.",
+    "instruments": [
+      "capital"
+    ],
+    "outcome": "invest"
+  },
+  "fields": {
+    "estimate": {
+      "atol": 1e-09,
+      "reference_value": 0.21566159228076628,
+      "rtol": 1e-08,
+      "status": "active"
+    },
+    "first_stage_f": {
+      "atol": 1e-07,
+      "reference_value": 77.64205478914872,
+      "rtol": 1e-08,
+      "status": "active"
+    },
+    "n_obs": {
+      "atol": 0,
+      "reference_value": 220.0,
+      "rtol": 0,
+      "status": "active"
+    },
+    "se": {
+      "reason": "Statsmodels default IV2SLS uses homoskedastic covariance; Quasi currently reports HC0-like covariance. These are NOT comparable SEs.",
+      "reference_value": 0.014725528898948657,
+      "status": "blocked"
+    }
+  },
+  "fixture_id": "grunfeld_2sls",
+  "limitations": "Numerical parity is NOT inference validation or credible causal identification.",
+  "method": "iv_2sls",
+  "reference": {
+    "estimator": "statsmodels.sandbox.regression.gmm.IV2SLS",
+    "package": "statsmodels",
+    "version": "0.14.6"
+  },
+  "reference_kind": "independent_real_data_numerical",
+  "schema_version": 1,
+  "statistical_review": {
+    "reviewer": null,
+    "status": "pending"
+  }
+}

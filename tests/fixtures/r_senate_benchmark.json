@@ -1,0 +1,17 @@
+{
+  "package": "rdrobust",
+  "dataset": "rdrobust_RDsenate",
+  "cutoff": 0.0,
+  "h_optimal": 17.754,
+  "b_pilot": 28.125,
+  "estimate": 7.414,
+  "se_conventional": 1.452,
+  "se_robust": 1.718,
+  "p_value_robust": 2e-05,
+  "ci_robust": [
+    4.047,
+    10.781
+  ],
+  "n_effective_left": 312,
+  "n_effective_right": 348
+}

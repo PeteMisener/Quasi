@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Synthetic Control, SDiD &amp; Augmented SCM — Quasi Tutorial</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <a class="brand-title" href="index.html">
+          Quasi
+          <span class="brand-sub">quasi-qed · v0.2.0.dev0</span>
+        </a>
+        <button id="theme-toggle" class="theme-btn" type="button">Dark</button>
+      </div>
+      <div>
+        <div class="nav-section-label">Tutorial Chapters</div>
+        <ul class="nav-list">
+          <li><a class="nav-link" href="index.html"><span class="nav-num">00</span><span>Overview &amp; Quickstart</span></a></li><li><a class="nav-link" href="did.html"><span class="nav-num">01</span><span>Difference-in-Differences</span></a></li><li><a class="nav-link" href="rdd.html"><span class="nav-num">02</span><span>Regression Discontinuity</span></a></li><li><a class="nav-link" href="iv.html"><span class="nav-num">03</span><span>Instrumental Variables</span></a></li><li><a class="nav-link" href="its.html"><span class="nav-num">04</span><span>Interrupted Time Series</span></a></li><li><a class="nav-link active" href="synthetic.html"><span class="nav-num">05</span><span>Synthetic Control &amp; SDiD</span></a></li><li><a class="nav-link" href="observational.html"><span class="nav-num">06</span><span>Observational ATT &amp; PSM</span></a></li><li><a class="nav-link" href="inference-power-reporting.html"><span class="nav-num">07</span><span>Inference, Power &amp; Reporting</span></a></li>
+        </ul>
+      </div>
+      <div class="toc-box">
+        <div class="nav-section-label">On This Page</div>
+        <ul><li><a href="#compare">1. SCM vs. SDiD vs. ASCM</a></li><li><a href="#diagnostics">2. Weights &amp; LODO Sensitivity</a></li></ul>
+      </div>
+    </aside>
+    <main class="main">
+      <section class="hero">
+        <span class="badge">Chapter 05 · Single-Treated Panels</span>
+        <h1>Synthetic Control, SDiD &amp; Augmented SCM</h1>
+        <p>Classic outcome-only SCM, intercept-centered Synthetic DiD with sparsification, Ben-Michael–Feller–Rothstein Ridge ASCM, and Chernozhukov–Wüthrich–Zhu conformal intervals.</p>
+      </section>
+      <div class="kpi-row"><div class="kpi"><div class="kpi-label">SDiD ATT (True = -4.0)</div><div class="kpi-val">-3.694</div><div class="kpi-sub">90% Conformal [-4.25, -2.96]</div></div><div class="kpi"><div class="kpi-label">Ridge ASCM ATT</div><div class="kpi-val">-3.705</div><div class="kpi-sub">90% Conformal [-4.63, -2.41]</div></div><div class="kpi"><div class="kpi-label">Classic SCM Gap</div><div class="kpi-val">-3.812</div><div class="kpi-sub">Pre-RMSPE = 0.29 (offset bias)</div></div><div class="kpi"><div class="kpi-label">Primary SE Policy</div><div class="kpi-val">None (Honest)</div><div class="kpi-sub">Opt-in CWZ conformal CI</div></div></div><div class="callout good"><div class="callout-title">Level Offsets &amp; Convex Hull Failures</div><div>Here <code>TargetState</code> sits +2.2 units above its donor convex hull. Uncentered classic SCM cannot absorb that offset (pre-RMSPE = <code>0.29</code>, gap = <code>-3.81</code>), whereas intercept-centered <strong>SDiD</strong> (<code>-3.69</code>) and <strong>Intercept-Shifted Ridge ASCM</strong> (<code>-3.70</code>, weights summing identically to <code>1.000000</code>) recover the true <code>-4.00</code> effect cleanly.</div></div><h2 id="compare">1. Comparing SCM, SDiD &amp; Augmented SCM</h2><div class="code-card"><div class="code-header"><span>SCM, SDiD, Augmented SCM &amp; CWZ Conformal Inference</span><button class="copy-btn" type="button">Copy</button></div><pre><code>import quasi
+
+# 1. Classic outcome-only SCM (point-only; exposure audited via treatment=)
+scm = quasi.estimate(
+    df_syn,
+    design=quasi.SyntheticDesign(
+        outcome=&quot;consumption&quot;, unit=&quot;state&quot;, time=&quot;year&quot;, treated_unit=&quot;TargetState&quot;,
+        intervention_time=2015, estimator=&quot;scm&quot;, treatment=&quot;treated&quot;, n_placebos=8,
+    ),
+)
+
+# 2. Synthetic DiD (intercept-centered, R-style sparsification)
+sdid = quasi.estimate(
+    df_syn,
+    design=quasi.SyntheticDesign(
+        outcome=&quot;consumption&quot;, unit=&quot;state&quot;, time=&quot;year&quot;, treated_unit=&quot;TargetState&quot;,
+        intervention_time=2015, estimator=&quot;sdid&quot;, treatment=&quot;treated&quot;, sparsify=&quot;default&quot;, n_placebos=8,
+    ),
+)
+
+# 3. Intercept-shifted Ridge-Augmented SCM (Ben-Michael, Feller &amp; Rothstein 2021)
+ascm = quasi.AugmentedSCM(
+    df_syn, outcome=&quot;consumption&quot;, unit=&quot;state&quot;, time=&quot;year&quot;,
+    treated_unit=&quot;TargetState&quot;, intervention_time=2015, treatment=&quot;treated&quot;,
+).fit()
+
+# 4. Chernozhukov, Wuthrich &amp; Zhu (2021) full-series Moving-Block Conformal 90% CIs
+ci_sdid = sdid.conformal_interval(alpha=0.10)
+ci_ascm = ascm.conformal_interval(alpha=0.10)</code></pre><pre class="output-pre"><code>Classic SCM : gap = -3.812, pre-RMSPE = 0.290 (level offset outside convex hull)
+SDiD        : ATT = -3.694, pre-RMSPE = 0.378, 90% Conformal CI = [-4.249, -2.956]
+Ridge ASCM  : ATT = -3.705, pre-RMSPE = 0.262, 90% Conformal CI = [-4.631, -2.408]
+ASCM weight sum = 1.000000, min weight = -0.0006, lambda = 1112
+SCM in-time placebo (2005): gap = +0.005</code></pre></div><div class="figure-card"><img src="assets/synth_sdid.png" alt="Synthetic DiD trajectory and donor placebo gap plot" loading="lazy" /><div class="figure-caption"><strong>Figure 4.</strong> Treated vs. synthetic counterfactual trajectory (top) and intercept-centered treatment gap against donor placebo 95% band (bottom), rendered via <code>sdid.plot()</code>.</div></div><h2 id="diagnostics">2. Donor Weights &amp; Leave-One-Donor-Out Sensitivity</h2><div class="tabs"><div class="tab-bar"><button type="button" class="tab-btn active">Donor Weight Comparison</button><button type="button" class="tab-btn">SCM Leave-One-Donor-Out</button><button type="button" class="tab-btn">SDiD Methods Text</button></div><div class="tab-panel active"><table class="data-table"><thead><tr><th>Donor</th><th>SCM Weight</th><th>SDiD Weight</th><th>ASCM Weight</th></tr></thead><tbody><tr><td>State_01</td><td>0.3911</td><td>0.1362</td><td>0.7498</td></tr><tr><td>State_02</td><td>0.0000</td><td>0.1118</td><td>0.2507</td></tr><tr><td>State_03</td><td>0.0000</td><td>0.0770</td><td>-0.0001</td></tr><tr><td>State_04</td><td>0.0000</td><td>0.0821</td><td>0.0000</td></tr><tr><td>State_05</td><td>0.0000</td><td>0.0735</td><td>0.0001</td></tr><tr><td>State_06</td><td>0.0000</td><td>0.0594</td><td>-0.0000</td></tr><tr><td>State_07</td><td>0.0000</td><td>0.0997</td><td>0.0001</td></tr><tr><td>State_08</td><td>0.0000</td><td>0.0621</td><td>-0.0003</td></tr><tr><td>State_09</td><td>0.0000</td><td>0.0353</td><td>-0.0000</td></tr><tr><td>State_10</td><td>0.2025</td><td>0.0948</td><td>0.0002</td></tr><tr><td>State_11</td><td>0.0000</td><td>0.0513</td><td>-0.0006</td></tr><tr><td>State_12</td><td>0.4064</td><td>0.1169</td><td>0.0002</td></tr></tbody></table></div><div class="tab-panel"><table class="data-table"><thead><tr><th>excluded_donor</th><th>post_average_gap</th><th>pre_rmspe</th><th>difference_from_full</th></tr></thead><tbody><tr><td>State_01</td><td>-3.7328</td><td>0.3439</td><td>0.0791</td></tr><tr><td>State_02</td><td>-3.8119</td><td>0.2900</td><td>0.0000</td></tr><tr><td>State_03</td><td>-3.8119</td><td>0.2900</td><td>0.0000</td></tr><tr><td>State_04</td><td>-3.8119</td><td>0.2900</td><td>0.0000</td></tr><tr><td>State_05</td><td>-3.8119</td><td>0.2900</td><td>0.0000</td></tr><tr><td>State_06</td><td>-3.8119</td><td>0.2900</td><td>0.0000</td></tr><tr><td>State_07</td><td>-3.8119</td><td>0.2900</td><td>0.0000</td></tr><tr><td>State_08</td><td>-3.8119</td><td>0.2900</td><td>-0.0000</td></tr><tr><td>State_09</td><td>-3.8119</td><td>0.2900</td><td>0.0000</td></tr><tr><td>State_10</td><td>-3.7332</td><td>0.3023</td><td>0.0787</td></tr></tbody></table></div><div class="tab-panel"><pre><code>Exploratory single-treated-unit Synthetic Difference-in-Differences (Arkhangelsky et al., 2021). Unit and time simplex weights used an unpenalized intercept and regularization scaled by the control first-difference noise estimate. R synthdid-style weight sparsification was applied. Point effect contrasts post-period treated-minus-donor outcomes against a weighted pre-period gap. Statistical uncertainty and calibrated p-values unavailable; leave-donor-out and donor-placebo calculations are descriptive only. Reference R synthdid equivalence and uncertainty certification remain outstanding.</code></pre></div></div>
+      <nav class="pager"><a href="its.html">&larr; Interrupted Time Series</a><a href="observational.html">Observational ATT &amp; PSM &rarr;</a></nav>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>

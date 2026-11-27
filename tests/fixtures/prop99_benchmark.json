@@ -1,0 +1,17 @@
+{
+  "package": "synthdid",
+  "dataset": "california_prop99",
+  "treated_unit": "California",
+  "intervention_time": 1989,
+  "estimate": -27.349,
+  "se_jackknife": 9.421,
+  "p_value": 0.0037,
+  "pre_rmspe": 2.142,
+  "top_donor_weights": {
+    "Utah": 0.334,
+    "Montana": 0.218,
+    "Nevada": 0.156,
+    "Colorado": 0.112,
+    "Connecticut": 0.089
+  }
+}
